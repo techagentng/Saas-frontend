@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { SESSION_HINT_COOKIE } from "@/lib/auth/session-hint";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/onboarding"];
 const AUTH_ROUTES = ["/login"];
 
 /**
@@ -37,5 +37,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/onboarding/:path*", "/login"],
 };
