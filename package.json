@@ -1,5 +1,5 @@
 {
-  "name": "saas-frontend",
+  "name": "saas-booking-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
