@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
-import { usePermissions } from "@/providers/permissions-provider";
+import { can, usePermissions } from "@/providers/permissions-provider";
 
 export function Sidebar() {
   const pathname = usePathname();
   const permissions = usePermissions();
 
   const items = dashboardNavItems.filter(
-    (item) => !item.permission || permissions.has(item.permission)
+    (item) => !item.permission || can(permissions, item.permission)
   );
 
   return (

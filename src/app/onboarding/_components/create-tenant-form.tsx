@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import type { FormEvent } from "react";
 
 import { isApiError } from "@/lib/api/errors";
-import { useCreateTenantMutation } from "@/modules/tenant/queries";
+import { useCreateTenant } from "@/modules/tenant/queries";
 import { useTenant } from "@/providers/tenant-provider";
 
 function slugify(value: string): string {
@@ -27,7 +27,7 @@ function errorMessageFor(error: unknown): string {
 }
 
 export function CreateTenantForm() {
-  const createTenantMutation = useCreateTenantMutation();
+  const createTenantMutation = useCreateTenant();
   const { setCurrentTenant } = useTenant();
   const router = useRouter();
   const nameId = useId();

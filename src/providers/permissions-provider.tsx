@@ -13,6 +13,11 @@ const PermissionsContext = createContext<Set<Permission> | null>(null);
  * (Tenant.permissions). This is a UX layer only — it may hide or disable
  * controls, but it never replaces backend authorization, which re-checks
  * every request regardless of what this reports.
+ *
+ * Scope: these are TENANT-scoped capabilities tied to `currentTenant`
+ * (F7) — they say nothing about PLATFORM-level (SUPER_ADMIN) capabilities.
+ * `/admin` (F17) does not use this provider for access control; `Can`/
+ * `useCan`/`can` should not be reused there to mean "is platform admin."
  */
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { currentTenant } = useTenant();
@@ -33,7 +38,12 @@ export function usePermissions(): Set<Permission> {
   return context;
 }
 
+/** Pure capability check against an already-read permission set — usable outside a hook (e.g. array filters). */
+export function can(permissions: Set<Permission>, permission: Permission): boolean {
+  return permissions.has(permission);
+}
+
 /** Hook form of the capability check, e.g. `if (useCan("staff.create")) ...`. */
 export function useCan(permission: Permission): boolean {
-  return usePermissions().has(permission);
+  return can(usePermissions(), permission);
 }

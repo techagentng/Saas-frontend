@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo } from "reac
 import type { ReactNode } from "react";
 
 import { clearPersistedTenantId, setPersistedTenantId, usePersistedTenantId } from "@/lib/tenant/storage";
-import { useTenantsQuery } from "@/modules/tenant/queries";
+import { useTenants } from "@/modules/tenant/queries";
 import { useAuth } from "@/providers/auth-provider";
 import type { Tenant } from "@/types/tenant";
 
@@ -20,7 +20,7 @@ const TenantContext = createContext<TenantContextValue | null>(null);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const tenantsQuery = useTenantsQuery();
+  const tenantsQuery = useTenants();
   const availableTenants = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data]);
   const persistedTenantId = usePersistedTenantId();
 

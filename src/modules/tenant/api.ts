@@ -1,19 +1,26 @@
 import { apiClient } from "@/lib/api/client";
 import type { Tenant } from "@/types/tenant";
 
+type TenantResponse = Omit<Tenant, "permissions"> & Partial<Pick<Tenant, "permissions">>;
+
 /**
- * GET /api/v1/tenants does not exist on the backend yet (Phase B non-goal:
- * no F3 calls against endpoints that aren't real). This stub keeps the
- * exact signature the real call will have —
- * `apiClient.get<Tenant[]>("/v1/tenants", { signal })` — so wiring it up
- * later is a one-line change here and requires no changes to
- * useTenantsQuery, TenantProvider, or any consumer.
+ * `permissions` isn't part of the confirmed backend tenant contract (see
+ * Frontend Epic 01 audit, F11) — normalized to `[]` here so every tenant
+ * the frontend sees always has a well-formed `Tenant`, regardless of
+ * whether/when the backend starts including it.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for signature parity with the future real call
-export function listTenants(signal?: AbortSignal): Promise<Tenant[]> {
-  return Promise.reject(
-    new Error("listTenants() is not implemented: GET /api/v1/tenants does not exist yet.")
-  );
+function normalizeTenant(raw: TenantResponse): Tenant {
+  return { ...raw, permissions: raw.permissions ?? [] };
+}
+
+export async function listTenants(signal?: AbortSignal): Promise<Tenant[]> {
+  const tenants = await apiClient.get<TenantResponse[]>("/v1/tenants", { signal });
+  return tenants.map(normalizeTenant);
+}
+
+export async function getTenant(tenantId: string, signal?: AbortSignal): Promise<Tenant> {
+  const tenant = await apiClient.get<TenantResponse>(`/v1/tenants/${tenantId}`, { signal });
+  return normalizeTenant(tenant);
 }
 
 export type CreateTenantInput = {
@@ -21,20 +28,30 @@ export type CreateTenantInput = {
   slug: string;
 };
 
-/**
- * Feature 2 (tenant creation) is confirmed live on the backend, unlike
- * listTenants() above. Contract assumed as `POST /v1/tenants` returning
- * the created tenant — confirm the exact path/shape against the real F2
- * API and adjust only this function; nothing else depends on the path.
- * `permissions` is normalized to `[]` if the response omits it, since
- * that field is really an F3/session concern.
- */
 export async function createTenant(input: CreateTenantInput, signal?: AbortSignal): Promise<Tenant> {
-  const created = await apiClient.post<Partial<Tenant> & Pick<Tenant, "id" | "name" | "slug">>(
-    "/v1/tenants",
-    input,
-    { signal }
-  );
+  const created = await apiClient.post<TenantResponse>("/v1/tenants", input, { signal });
+  return normalizeTenant(created);
+}
 
-  return { ...created, permissions: created.permissions ?? [] };
+/**
+ * Only the fields the backend accepts as editable business-profile data.
+ * `id`, `slug`, `status`, `created_at`, `updated_at`, and `permissions`
+ * are backend-owned and never sent here — slug in particular is immutable
+ * through this endpoint.
+ */
+export type UpdateTenantProfileInput = Partial<{
+  name: string;
+  description: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  timezone: string;
+}>;
+
+export async function updateTenantProfile(
+  tenantId: string,
+  input: UpdateTenantProfileInput,
+  signal?: AbortSignal
+): Promise<Tenant> {
+  const updated = await apiClient.patch<TenantResponse>(`/v1/tenants/${tenantId}`, input, { signal });
+  return normalizeTenant(updated);
 }

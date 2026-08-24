@@ -2,51 +2,80 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createTenant, listTenants } from "@/modules/tenant/api";
-import type { CreateTenantInput } from "@/modules/tenant/api";
+import { createTenant, getTenant, listTenants, updateTenantProfile } from "@/modules/tenant/api";
+import type { CreateTenantInput, UpdateTenantProfileInput } from "@/modules/tenant/api";
+import { tenantKeys } from "@/modules/tenant/keys";
 import { useAuth } from "@/providers/auth-provider";
 import type { Tenant } from "@/types/tenant";
-
-export const TENANTS_QUERY_KEY = ["tenants", "list"] as const;
 
 /**
  * Tenant *fetching* layer — kept separate from tenant *selection* state
  * (see providers/tenant-provider.tsx), which builds on top of this.
  * Disabled while unauthenticated since tenant membership is per-user.
  */
-export function useTenantsQuery() {
+export function useTenants() {
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    queryKey: TENANTS_QUERY_KEY,
+    queryKey: tenantKeys.list(),
     queryFn: ({ signal }) => listTenants(signal),
     enabled: isAuthenticated,
-    retry: false,
   });
 }
 
 /**
- * The post-create "refresh tenant data" integration point, isolated here
- * so it needs no changes when F3 (GET /v1/tenants) lands:
- *
- * - Optimistically appends the created tenant (F2's response) to the
- *   cached list, so it's usable immediately without waiting on F3.
- * - Invalidates the list so a background refetch reconciles with the
- *   server once F3 exists. Today that refetch fails (listTenants() is a
- *   stub) — TanStack Query keeps the last-set `data` on a failed refetch,
- *   so the optimistic entry above survives untouched.
+ * Single-tenant fetch by id. Named `useTenantDetail` (not `useTenant`) to
+ * avoid colliding with TenantProvider's existing `useTenant()` (F7), which
+ * returns the current *selection* context, not a server fetch.
  */
-export function useCreateTenantMutation() {
+export function useTenantDetail(tenantId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+
+  return useQuery({
+    queryKey: tenantKeys.detail(tenantId ?? ""),
+    queryFn: ({ signal }) => getTenant(tenantId as string, signal),
+    enabled: isAuthenticated && Boolean(tenantId),
+  });
+}
+
+/**
+ * Appends the created tenant to the cached list and seeds its detail cache
+ * immediately, so it's usable without waiting on a refetch, then
+ * invalidates every tenant query so the server remains the eventual
+ * source of truth.
+ */
+export function useCreateTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: CreateTenantInput) => createTenant(input),
     onSuccess: (createdTenant) => {
-      queryClient.setQueryData<Tenant[]>(TENANTS_QUERY_KEY, (existing) => {
+      queryClient.setQueryData<Tenant[]>(tenantKeys.list(), (existing) => {
         const withoutDuplicate = (existing ?? []).filter((tenant) => tenant.id !== createdTenant.id);
         return [...withoutDuplicate, createdTenant];
       });
-      queryClient.invalidateQueries({ queryKey: TENANTS_QUERY_KEY });
+      queryClient.setQueryData(tenantKeys.detail(createdTenant.id), createdTenant);
+      queryClient.invalidateQueries({ queryKey: tenantKeys.all });
+    },
+  });
+}
+
+/**
+ * Keeps the list and detail caches consistent after a profile edit, so
+ * nothing derived from them (sidebar, header, TenantProvider's
+ * currentTenant) shows a stale name/description after a save.
+ */
+export function useUpdateTenantProfile(tenantId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateTenantProfileInput) => updateTenantProfile(tenantId, input),
+    onSuccess: (updatedTenant) => {
+      queryClient.setQueryData(tenantKeys.detail(tenantId), updatedTenant);
+      queryClient.setQueryData<Tenant[]>(tenantKeys.list(), (existing) =>
+        existing?.map((tenant) => (tenant.id === tenantId ? updatedTenant : tenant))
+      );
+      queryClient.invalidateQueries({ queryKey: tenantKeys.all });
     },
   });
 }
