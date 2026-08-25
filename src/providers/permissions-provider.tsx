@@ -3,26 +3,40 @@
 import { createContext, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 
+import { useTenantPermissions } from "@/modules/permissions/queries";
 import { useTenant } from "@/providers/tenant-provider";
 import type { Permission } from "@/types/permission";
 
 const PermissionsContext = createContext<Set<Permission> | null>(null);
 
 /**
- * Sources capabilities from the current tenant membership
- * (Tenant.permissions). This is a UX layer only — it may hide or disable
- * controls, but it never replaces backend authorization, which re-checks
- * every request regardless of what this reports.
+ * Sources capabilities from the backend's effective-permissions endpoint
+ * (GET /v1/tenants/{id}/permissions — Frontend Epic 01 F11), scoped to
+ * `currentTenant` (F7). UX layer only — never replaces backend
+ * authorization, which re-checks every request regardless of what this
+ * reports.
  *
- * Scope: these are TENANT-scoped capabilities tied to `currentTenant`
- * (F7) — they say nothing about PLATFORM-level (SUPER_ADMIN) capabilities.
- * `/admin` (F17) does not use this provider for access control; `Can`/
- * `useCan`/`can` should not be reused there to mean "is platform admin."
+ * Fails closed by construction: the exposed set is empty — never a
+ * previous tenant's data — whenever there's no current tenant, the query
+ * hasn't resolved yet, or it resolved to an error (e.g. 403
+ * TENANT_ACCESS_DENIED). Switching `currentTenant` changes the query key
+ * (permissionKeys.tenant), so React Query treats it as a distinct cache
+ * entry rather than reusing Tenant A's cached result while Tenant B's
+ * loads.
+ *
+ * Scope: these are TENANT-scoped capabilities. They say nothing about
+ * PLATFORM-level (SUPER_ADMIN) capabilities — `/admin` (F17) does not use
+ * this provider for access control; `Can`/`useCan`/`can` should not be
+ * reused there to mean "is platform admin."
  */
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { currentTenant } = useTenant();
+  const permissionsQuery = useTenantPermissions(currentTenant?.id);
 
-  const permissions = useMemo(() => new Set(currentTenant?.permissions ?? []), [currentTenant]);
+  const permissions = useMemo(
+    () => new Set(permissionsQuery.isSuccess ? permissionsQuery.data : []),
+    [permissionsQuery.isSuccess, permissionsQuery.data]
+  );
 
   return <PermissionsContext.Provider value={permissions}>{children}</PermissionsContext.Provider>;
 }

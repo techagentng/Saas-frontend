@@ -1,9 +1,32 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Logo } from "@/components/ui/Logo";
+
+/**
+ * Deliberately light-only, matching the marketing site's hero treatment
+ * (bg-dot-grid + brand radial glow) rather than the zinc/dark-mode-adaptive
+ * palette used by the authenticated dashboard shell — this is the visitor's
+ * first impression after leaving the landing page, before any app chrome.
+ */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-      <div className="w-full max-w-sm">{children}</div>
+    <div className="relative flex min-h-full flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white px-4 py-12">
+      <div className="absolute inset-0 -z-10 bg-dot-grid opacity-60" />
+      <div
+        className="absolute left-1/2 top-0 -z-10 h-[420px] w-[820px] -translate-x-1/2 rounded-full opacity-50 blur-3xl"
+        style={{ background: "radial-gradient(ellipse at center, rgb(99 102 241 / 0.18), transparent 70%)" }}
+      />
+
+      <Link href="/" className="mb-8 flex items-center" aria-label="BookFlow home">
+        <Logo />
+      </Link>
+
+      <div className="flex w-full flex-col items-center">{children}</div>
+
+      <p className="mt-8 text-center text-xs text-slate-400">
+        © {new Date().getFullYear()} BookFlow. All rights reserved.
+      </p>
     </div>
   );
 }

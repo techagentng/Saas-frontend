@@ -11,20 +11,33 @@ export type ApiErrorBody = {
 };
 
 /**
- * Known machine-readable error codes. This union is intentionally not
- * exhaustive — unrecognized codes still flow through as `string` so the
- * client never throws on an unmapped code from the backend.
+ * Machine-readable error codes, matching internal/errors/codes.go in the
+ * Go monolith exactly (confirmed against source, not guessed). Still not
+ * treated as exhaustive at the type level — unrecognized codes flow
+ * through as `string` (see ApiErrorCode) so the client never throws on a
+ * code this union hasn't caught up with yet.
  */
 export type KnownApiErrorCode =
+  | "VALIDATION_FAILED"
+  | "INVALID_REQUEST"
   | "INVALID_CREDENTIALS"
-  | "UNAUTHENTICATED"
+  | "SESSION_EXPIRED"
+  | "SESSION_REVOKED"
+  | "PERMISSION_DENIED"
+  | "TENANT_ACCESS_DENIED"
+  | "RESOURCE_NOT_FOUND"
+  | "USER_NOT_FOUND"
   | "TENANT_NOT_FOUND"
   | "TENANT_SLUG_TAKEN"
   | "TENANT_SLUG_INVALID"
-  | "TENANT_ACCESS_DENIED"
-  | "VALIDATION_ERROR"
-  | "NOT_FOUND"
-  | "FORBIDDEN"
+  | "USER_ALREADY_EXISTS"
+  | "TENANT_MEMBERSHIP_ALREADY_EXISTS"
+  | "ROLE_ALREADY_EXISTS"
+  | "ROLE_NOT_FOUND"
+  | "PERMISSION_NOT_FOUND"
+  | "ROLE_ASSIGNMENT_ALREADY_EXISTS"
+  | "RATE_LIMITED"
+  | "SERVICE_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
 export type ApiErrorCode = KnownApiErrorCode | (string & {});

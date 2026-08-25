@@ -1,73 +1,102 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { clearSessionHint, setSessionHint } from "@/lib/auth/session-hint";
+import { refreshAccessToken } from "@/lib/api/client";
+import { clearTokens, setTokens, useTokens } from "@/lib/auth/token-store";
 import * as authApi from "@/modules/auth/api";
 import type { AuthState, AuthUser, LoginCredentials } from "@/types/auth";
 
-const SESSION_QUERY_KEY = ["auth", "session"] as const;
-
 type AuthContextValue = AuthState & {
-  login: (credentials: LoginCredentials) => Promise<AuthUser>;
+  login: (credentials: LoginCredentials) => Promise<AuthUser | null>;
+  /** Registers a new account, then immediately logs in with the same credentials — POST /v1/users returns no tokens on its own. */
+  register: (credentials: LoginCredentials) => Promise<AuthUser | null>;
   logout: () => Promise<void>;
-  /** Re-fetches the session from the backend, e.g. after an external 401. */
+  /** Proactively refreshes the access token. Clears auth state if the refresh credential is no longer valid. */
   refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * There is no session/"current user" endpoint on the backend (confirmed: no
+ * such route is registered), and tokens are memory-only by design (see
+ * lib/auth/token-store.ts), so auth state is derived synchronously from
+ * whether a token is currently held — there is no async "resolve the
+ * session on boot" step the way a cookie-backed session would need. `user`
+ * is only ever known immediately after a successful login() and is cleared
+ * whenever tokens disappear for any reason (explicit logout, or the
+ * apiClient's background refresh failing and force-clearing tokens).
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
+  const tokens = useTokens();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const sessionQuery = useQuery({
-    queryKey: SESSION_QUERY_KEY,
-    queryFn: ({ signal }) => authApi.getCurrentUser(signal),
-    // A 401 here just means "not logged in" — not worth retrying or surfacing as an error.
-    retry: false,
-    staleTime: 60 * 1000,
-  });
+  // Masked (not reset via an effect) so tokens disappearing for any reason —
+  // explicit logout, or the apiClient's background refresh force-clearing
+  // them — instantly stops exposing a stale user, with no extra render.
+  const effectiveUser = tokens ? user : null;
 
-  const loginMutation = useMutation({
-    mutationFn: (credentials: LoginCredentials) => authApi.login(credentials),
-    onSuccess: (user) => {
-      setSessionHint();
-      queryClient.setQueryData(SESSION_QUERY_KEY, user);
-    },
-  });
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    setIsLoggingIn(true);
+    try {
+      const result = await authApi.login(credentials);
+      setTokens({ accessToken: result.access_token, refreshToken: result.refresh_token });
+      setUser(result.user ?? null);
+      return result.user ?? null;
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, []);
 
-  const logoutMutation = useMutation({
-    mutationFn: () => authApi.logout(),
-    onSettled: () => {
-      clearSessionHint();
-      queryClient.setQueryData(SESSION_QUERY_KEY, null);
-    },
-  });
+  const register = useCallback(async (credentials: LoginCredentials) => {
+    setIsLoggingIn(true);
+    try {
+      await authApi.register(credentials);
+      const result = await authApi.login(credentials);
+      setTokens({ accessToken: result.access_token, refreshToken: result.refresh_token });
+      setUser(result.user ?? null);
+      return result.user ?? null;
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } finally {
+      clearTokens();
+      setUser(null);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
-    await sessionQuery.refetch();
-  }, [sessionQuery]);
-
-  const user = sessionQuery.data ?? null;
+    const refreshedToken = await refreshAccessToken();
+    if (!refreshedToken) {
+      setUser(null);
+    }
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
-      isAuthenticated: Boolean(user),
-      isLoading: sessionQuery.isLoading,
-      login: (credentials) => loginMutation.mutateAsync(credentials),
-      logout: () => logoutMutation.mutateAsync(),
+      user: effectiveUser,
+      isAuthenticated: Boolean(tokens),
+      isLoading: isLoggingIn,
+      login,
+      register,
+      logout,
       refresh,
     }),
-    [user, sessionQuery.isLoading, loginMutation, logoutMutation, refresh]
+    [effectiveUser, tokens, isLoggingIn, login, register, logout, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth(): AuthContextValue {
+export function  useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
 
   if (!context) {

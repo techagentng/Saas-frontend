@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/ui/Logo";
 
 const navLinks = [
   { label: "Product", href: "#product" },
@@ -27,16 +28,7 @@ export function Navbar() {
     <header className={cn("fixed inset-x-0 top-0 z-50 transition-all duration-300", scrolled ? "border-b border-slate-200/70 bg-white/80 backdrop-blur-xl" : "border-b border-transparent")}>
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
         <Link href="/" className="flex items-center" aria-label="BookFlow home">
-          <span className="inline-flex items-center gap-2.5">
-            <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-xl bg-ink shadow-sm">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-                <rect x="4" y="6" width="16" height="14" rx="2.5" stroke="#a5b4fc" strokeWidth="1.8" />
-                <path d="M8 4v4M16 4v4M4 11h16" stroke="#818cf8" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="12" cy="15.5" r="1.8" fill="#c7d2fe" />
-              </svg>
-            </span>
-            <span className="text-[17px] font-semibold tracking-tight text-slate-900">Book<span className="text-brand-600">Flow</span></span>
-          </span>
+          <Logo />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

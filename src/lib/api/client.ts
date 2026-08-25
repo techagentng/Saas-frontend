@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/api/config";
 import { toApiError } from "@/lib/api/errors";
+import { clearTokens, getTokens, setTokens } from "@/lib/auth/token-store";
 
 export type ApiRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -26,25 +27,101 @@ function buildUrl(path: string, query?: ApiRequestOptions["query"]): string {
 }
 
 /**
- * Centralized JSON request helper. Sends the backend session cookie via
- * `credentials: "include"` and normalizes every non-2xx response into an
- * `ApiError` (see lib/api/errors.ts) so callers never parse status/message
- * text themselves.
+ * Login never carries a token to attach in the first place, but is excluded
+ * anyway for clarity: it must never trigger a refresh-and-retry cycle, even
+ * in the edge case of calling login() again while a stale token is still
+ * held in memory. /auth/refresh itself is not listed here — it's called
+ * directly via performFetch (see refreshAccessToken), never through
+ * apiRequest, so it structurally cannot re-enter this retry path.
  */
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+const NO_RETRY_PATHS = new Set(["/v1/auth/login"]);
+
+async function performFetch(
+  path: string,
+  options: ApiRequestOptions,
+  accessToken: string | null
+): Promise<Response> {
   const { method = "GET", body, query, headers, signal } = options;
 
-  const response = await fetch(buildUrl(path, query), {
+  return fetch(buildUrl(path, query), {
     method,
-    credentials: "include",
     headers: {
       Accept: "application/json",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal,
   });
+}
+
+type RefreshResponseBody = { access_token: string; refresh_token: string };
+
+// Shared across all callers so concurrent 401s trigger exactly one refresh
+// call — the backend rotates the refresh token on every use (confirmed in
+// source), so two concurrent refresh attempts would have the second one
+// fail with SESSION_REVOKED against the now-already-rotated-out token.
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * Attempts to exchange the current refresh token for a new access token.
+ * Exported so AuthProvider.refresh() shares this exact single-flight
+ * implementation rather than duplicating the HTTP call.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  const current = getTokens();
+  if (!current) return null;
+
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const response = await performFetch(
+          "/v1/auth/refresh",
+          { method: "POST", body: { refresh_token: current.refreshToken } },
+          null
+        );
+
+        if (!response.ok) {
+          clearTokens();
+          return null;
+        }
+
+        const result = (await response.json()) as RefreshResponseBody;
+        setTokens({ accessToken: result.access_token, refreshToken: result.refresh_token });
+        return result.access_token;
+      } catch {
+        clearTokens();
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+
+  return refreshInFlight;
+}
+
+/**
+ * Centralized JSON request helper. Attaches `Authorization: Bearer` when an
+ * access token is currently held (harmless to attach on a public route —
+ * it's simply ignored — and required on a protected one); on a 401 from a
+ * request that had a token attached, refreshes once and retries the
+ * original request once. If that retry also fails, or refresh itself
+ * fails, the failure propagates as a normal ApiError — never an infinite
+ * loop. Every non-2xx response is normalized into an `ApiError` (see
+ * lib/api/errors.ts) so callers never parse status/message text themselves.
+ */
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const initialToken = getTokens()?.accessToken ?? null;
+  let response = await performFetch(path, options, initialToken);
+
+  if (response.status === 401 && initialToken && !NO_RETRY_PATHS.has(path)) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      response = await performFetch(path, options, refreshedToken);
+    }
+  }
 
   if (!response.ok) {
     throw await toApiError(response);

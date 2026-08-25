@@ -7,11 +7,13 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/providers/auth-provider";
 
 /**
- * Client-side gate for the (dashboard)/(platform) route groups. The
- * backend session cookie lives on a separate origin, so it isn't visible
- * to `proxy.ts` for a server-side redirect (see lib/auth/session-hint.ts)
- * — this component is the authoritative check, and withholds `children`
- * until it resolves so protected content never flashes before redirect.
+ * Client-side gate for the (dashboard)/(platform) route groups. Auth is a
+ * Bearer access token held only in memory (lib/auth/token-store.ts) — there
+ * is no cookie or other server-readable artifact, so no Next.js middleware
+ * can make this decision; this component is the sole and authoritative
+ * check. `isAuthenticated`/`isLoading` are resolved synchronously (no
+ * session endpoint to await), so this never flashes protected content
+ * before redirecting.
  */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
