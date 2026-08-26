@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { refreshAccessToken } from "@/lib/api/client";
@@ -20,18 +20,20 @@ type AuthContextValue = AuthState & {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * There is no session/"current user" endpoint on the backend (confirmed: no
- * such route is registered), and tokens are memory-only by design (see
- * lib/auth/token-store.ts), so auth state is derived synchronously from
- * whether a token is currently held — there is no async "resolve the
- * session on boot" step the way a cookie-backed session would need. `user`
- * is only ever known immediately after a successful login() and is cleared
- * whenever tokens disappear for any reason (explicit logout, or the
- * apiClient's background refresh failing and force-clearing tokens).
+ * Auth state is an in-memory access token (lib/auth/token-store.ts) plus the
+ * user it belongs to. Persistence across reloads comes from the backend's
+ * HttpOnly `bk_refresh` cookie, which this code can never read — on startup
+ * we simply ask the server to trade it for a fresh access token.
+ *
+ * `isLoading` therefore means something real now: it is `true` from first
+ * paint until that startup exchange settles. Route guards MUST wait on it —
+ * redirecting while it is still `true` would bounce a legitimately signed-in
+ * user to /login on every reload, which is the exact defect this replaces.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const tokens = useTokens();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isRestoring, setIsRestoring] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Masked (not reset via an effect) so tokens disappearing for any reason —
@@ -39,11 +41,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // them — instantly stops exposing a stale user, with no extra render.
   const effectiveUser = tokens ? user : null;
 
+  // Startup session restoration. Runs exactly once per mount: if a valid
+  // refresh cookie exists the session is rebuilt silently; if not, we settle
+  // into a clean unauthenticated state. Either way `isRestoring` flips false
+  // only once the answer is known, never before.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const restored = await refreshAccessToken();
+        if (!cancelled && restored?.user) {
+          setUser(restored.user);
+        }
+      } finally {
+        if (!cancelled) setIsRestoring(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const login = useCallback(async (credentials: LoginCredentials) => {
     setIsLoggingIn(true);
     try {
       const result = await authApi.login(credentials);
-      setTokens({ accessToken: result.access_token, refreshToken: result.refresh_token });
+      setTokens({ accessToken: result.access_token });
       setUser(result.user ?? null);
       return result.user ?? null;
     } finally {
@@ -56,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.register(credentials);
       const result = await authApi.login(credentials);
-      setTokens({ accessToken: result.access_token, refreshToken: result.refresh_token });
+      setTokens({ accessToken: result.access_token });
       setUser(result.user ?? null);
       return result.user ?? null;
     } finally {
@@ -68,15 +93,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logout();
     } finally {
+      // Local state is cleared even if the network call failed: the user
+      // asked to be signed out, so this device stops acting authenticated
+      // regardless. The server-side revocation and cookie expiry are what
+      // make it durable across a reload.
       clearTokens();
       setUser(null);
     }
   }, []);
 
   const refresh = useCallback(async () => {
-    const refreshedToken = await refreshAccessToken();
-    if (!refreshedToken) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
       setUser(null);
+    } else if (refreshed.user) {
+      setUser(refreshed.user);
     }
   }, []);
 
@@ -84,19 +115,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: effectiveUser,
       isAuthenticated: Boolean(tokens),
-      isLoading: isLoggingIn,
+      isLoading: isRestoring || isLoggingIn,
       login,
       register,
       logout,
       refresh,
     }),
-    [effectiveUser, tokens, isLoggingIn, login, register, logout, refresh]
+    [effectiveUser, tokens, isRestoring, isLoggingIn, login, register, logout, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function  useAuth(): AuthContextValue {
+export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
 
   if (!context) {

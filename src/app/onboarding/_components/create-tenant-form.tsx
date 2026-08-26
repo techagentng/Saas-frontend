@@ -4,9 +4,17 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 
-import { isApiError } from "@/lib/api/errors";
+import { apiErrorMessage } from "@/lib/api/error-messages";
+import { businessTypeLabel } from "@/lib/tenant/business-type-labels";
 import { useCreateTenant } from "@/modules/tenant/queries";
 import { useTenant } from "@/providers/tenant-provider";
+import type { BusinessType } from "@/types/tenant";
+
+/**
+ * Canonical order, matching the backend's own `business_type.go` const
+ * order — not alphabetized, not reordered for UX preference.
+ */
+const BUSINESS_TYPES: BusinessType[] = ["NAIL_TECHNICIAN", "RESTAURANT", "HOTEL", "TRANSPORT"];
 
 function slugify(value: string): string {
   return value
@@ -17,13 +25,12 @@ function slugify(value: string): string {
 }
 
 function errorMessageFor(error: unknown): string {
-  if (isApiError(error)) {
-    if (error.code === "TENANT_SLUG_TAKEN") {
-      return "That URL is already taken. Try a different slug.";
-    }
-    return error.message;
-  }
-  return "Something went wrong. Please try again.";
+  return apiErrorMessage(error, {
+    // Only this screen knows the request carried a name, slug, and business
+    // type, so it can name them instead of the backend's blanket wording.
+    VALIDATION_FAILED:
+      "Check your details: your business needs a name, a business type, and a URL using lowercase letters, numbers, and hyphens.",
+  });
 }
 
 export function CreateTenantForm() {
@@ -32,10 +39,15 @@ export function CreateTenantForm() {
   const router = useRouter();
   const nameId = useId();
   const slugId = useId();
+  const businessTypeId = useId();
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [isSlugTouched, setIsSlugTouched] = useState(false);
+  // No default vertical — business_type materially affects future
+  // onboarding/dashboard/public-booking behavior, so it must be a
+  // deliberate choice, never silently defaulted.
+  const [businessType, setBusinessType] = useState<BusinessType | "">("");
   const [error, setError] = useState<string | null>(null);
 
   function handleNameChange(value: string) {
@@ -49,9 +61,18 @@ export function CreateTenantForm() {
     event.preventDefault();
     setError(null);
 
+    if (businessType === "") {
+      setError("Choose a business type.");
+      return;
+    }
+
     try {
-      const tenant = await createTenantMutation.mutateAsync({ name, slug });
+      const tenant = await createTenantMutation.mutateAsync({ name, slug, business_type: businessType });
       setCurrentTenant(tenant);
+      // Always /dashboard: the tenant is always created IN_PROGRESS, and
+      // TenantGate (F4) is the single source of routing truth — it will
+      // redirect to /onboarding/{id} itself rather than this form
+      // duplicating that decision.
       router.push("/dashboard");
     } catch (err) {
       setError(errorMessageFor(err));
@@ -61,7 +82,7 @@ export function CreateTenantForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={nameId} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor={nameId} className="text-sm font-medium text-slate-700">
           Business name
         </label>
         <input
@@ -71,12 +92,35 @@ export function CreateTenantForm() {
           required
           value={name}
           onChange={(event) => handleNameChange(event.target.value)}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-colors hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={slugId} className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor={businessTypeId} className="text-sm font-medium text-slate-700">
+          Business type
+        </label>
+        <select
+          id={businessTypeId}
+          name="business_type"
+          required
+          value={businessType}
+          onChange={(event) => setBusinessType(event.target.value as BusinessType)}
+          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-colors hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
+        >
+          <option value="" disabled>
+            Select a business type
+          </option>
+          {BUSINESS_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {businessTypeLabel(type)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={slugId} className="text-sm font-medium text-slate-700">
           Slug
         </label>
         <input
@@ -91,12 +135,15 @@ export function CreateTenantForm() {
             setIsSlugTouched(true);
             setSlug(slugify(event.target.value));
           }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-black dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-colors hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
         />
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-700"
+        >
           {error}
         </p>
       )}
@@ -104,9 +151,9 @@ export function CreateTenantForm() {
       <button
         type="submit"
         disabled={createTenantMutation.isPending}
-        className="mt-2 rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+        className="btn-primary mt-2 h-11 w-full text-sm disabled:opacity-60"
       >
-        {createTenantMutation.isPending ? "Creating…" : "Create"}
+        {createTenantMutation.isPending ? "Creating…" : "Create workspace"}
       </button>
     </form>
   );

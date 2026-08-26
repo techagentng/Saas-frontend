@@ -1,14 +1,24 @@
 /**
- * Structured error shape the backend is expected to return for non-2xx
- * JSON responses: `{ code, message, details? }`. Adapt this once the real
- * backend contract is confirmed; nothing in the app should parse
- * `message` text to make decisions — branch on `code` instead.
+ * The error payload itself. Nothing in the app should parse `message` text
+ * to make decisions — branch on `code` instead.
  */
 export type ApiErrorBody = {
   code: string;
   message: string;
   details?: Record<string, unknown>;
 };
+
+/**
+ * The real wire shape: the backend nests the payload under `error`
+ * (confirmed against internal/errors/http.go's WriteJSON, which encodes
+ * `{"error": {"code", "message"}}`). Reading `code`/`message` off the top
+ * level silently yielded `undefined` for both, so every branch on
+ * `error.code` fell through and users saw raw HTTP status text — "Conflict"
+ * instead of "That URL is already taken."
+ */
+export type ApiErrorEnvelope = {
+  error?: Partial<ApiErrorBody>;
+} & Partial<ApiErrorBody>;
 
 /**
  * Machine-readable error codes, matching internal/errors/codes.go in the

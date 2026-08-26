@@ -6,18 +6,22 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
 
-import { isApiError } from "@/lib/api/errors";
+import { apiErrorMessage } from "@/lib/api/error-messages";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 
+// Matches the backend's own bounds (identity/model: 8–128 characters).
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
 
 function errorMessageFor(error: unknown): string {
-  if (isApiError(error)) {
-    if (error.code === "USER_ALREADY_EXISTS") return "An account with this email already exists.";
-    return error.message;
-  }
-  return "Something went wrong. Please try again.";
+  return apiErrorMessage(error, {
+    // The backend returns one opaque "The request failed validation." for
+    // every rejected field. Registration only sends an email and a password,
+    // so both possibilities can be named honestly rather than guessing.
+    VALIDATION_FAILED: `Check your details: enter a valid email address and a password between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`,
+  });
 }
 
 export function RegisterForm() {
@@ -40,15 +44,30 @@ export function RegisterForm() {
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
+    // Checked client-side so the user gets a precise message instead of the
+    // backend's single opaque VALIDATION_FAILED for every bad field.
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Your password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+    if (password.length > MAX_PASSWORD_LENGTH) {
+      setError(`Your password must be ${MAX_PASSWORD_LENGTH} characters or fewer.`);
+      return;
+    }
     if (password !== confirmPassword) {
-      setError("Passwords don't match.");
+      setError("Those passwords don't match. Re-enter them and try again.");
       return;
     }
 
     setIsSubmitting(true);
     try {
       await register({ email, password });
-      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      // A brand-new account provably has no tenants — POST /v1/users creates
+      // only the user row, never a membership — so go straight to onboarding
+      // instead of bouncing through /dashboard just to have TenantGate send
+      // us here anyway. That bounce showed a bare "Loading…" screen during
+      // the extra hop. An explicit ?redirect= still wins.
+      const redirectTo = searchParams.get("redirect") || "/onboarding";
       router.replace(redirectTo);
     } catch (err) {
       setError(errorMessageFor(err));
@@ -89,28 +108,29 @@ export function RegisterForm() {
           <label htmlFor={passwordId} className="mb-1.5 block text-sm font-medium text-slate-700">
             Password
           </label>
-          <input
+          <PasswordInput
             id={passwordId}
             name="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={MIN_PASSWORD_LENGTH}
             placeholder="••••••••"
             className={cn(inputBase, inputBorder)}
             disabled={isSubmitting}
+            aria-describedby={`${passwordId}-hint`}
           />
-          <p className="mt-1.5 text-xs text-slate-500">At least {MIN_PASSWORD_LENGTH} characters.</p>
+          <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-slate-500">
+            At least {MIN_PASSWORD_LENGTH} characters.
+          </p>
         </div>
 
         <div>
           <label htmlFor={confirmPasswordId} className="mb-1.5 block text-sm font-medium text-slate-700">
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id={confirmPasswordId}
             name="confirmPassword"
-            type="password"
             autoComplete="new-password"
             required
             minLength={MIN_PASSWORD_LENGTH}

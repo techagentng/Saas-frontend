@@ -18,14 +18,15 @@ export type LoginCredentials = {
 
 /**
  * Raw shape of POST /v1/auth/login and /v1/auth/refresh responses
- * (identity/handler.writeAuthenticationResult). `user` is only present on
- * login — refresh omits it (omitempty, and the backend has no separate
- * "current user" endpoint to re-fetch it from).
+ * (identity/handler.writeAuthenticationResult). There is deliberately no
+ * `refresh_token` field: the refresh credential is delivered as an HttpOnly
+ * cookie that JavaScript cannot read. Both endpoints return `user` — refresh
+ * includes it so a reloaded browser can rebuild its identity without a
+ * separate "current user" endpoint.
  */
 export type AuthenticationResult = {
   user?: AuthUser;
   access_token: string;
-  refresh_token: string;
   expires_in: number;
 };
 

@@ -5,16 +5,15 @@ import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
-import { isApiError } from "@/lib/api/errors";
+import { apiErrorMessage } from "@/lib/api/error-messages";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 
 function errorMessageFor(error: unknown): string {
-  if (isApiError(error)) {
-    if (error.code === "INVALID_CREDENTIALS") return "Incorrect email or password.";
-    return error.message;
-  }
-  return "Something went wrong. Please try again.";
+  return apiErrorMessage(error, {
+    VALIDATION_FAILED: "Enter a valid email address and your password.",
+  });
 }
 
 export function LoginForm() {
@@ -121,10 +120,9 @@ export function LoginForm() {
               Forgot password?
             </Link>
           </div>
-          <input
+          <PasswordInput
             id={passwordId}
             name="password"
-            type="password"
             autoComplete="current-password"
             required
             placeholder="••••••••"

@@ -1,6 +1,7 @@
 import { getApiBaseUrl } from "@/lib/api/config";
 import { toApiError } from "@/lib/api/errors";
 import { clearTokens, getTokens, setTokens } from "@/lib/auth/token-store";
+import type { AuthUser } from "@/types/auth";
 
 export type ApiRequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -52,46 +53,68 @@ async function performFetch(
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    // Required for the HttpOnly refresh cookie to travel on /v1/auth/*
+    // requests, which are cross-origin (different port) from the app. The
+    // cookie's own Path scopes it to the auth routes, so this does not
+    // attach it to tenant/onboarding calls; it only permits the browser to
+    // send it where it belongs. The backend echoes a concrete origin plus
+    // Access-Control-Allow-Credentials to make this legal.
+    credentials: "include",
     signal,
   });
 }
 
-type RefreshResponseBody = { access_token: string; refresh_token: string };
+/** Refresh returns a new access token and `user`; the rotated refresh credential arrives as a Set-Cookie the browser stores itself. */
+type RefreshResponseBody = { access_token: string; user?: AuthUser };
+
+export type RefreshOutcome = { accessToken: string; user: AuthUser | null } | null;
 
 // Shared across all callers so concurrent 401s trigger exactly one refresh
-// call — the backend rotates the refresh token on every use (confirmed in
-// source), so two concurrent refresh attempts would have the second one
-// fail with SESSION_REVOKED against the now-already-rotated-out token.
-let refreshInFlight: Promise<string | null> | null = null;
+// call — the backend rotates the refresh credential on every use (confirmed
+// in source), so two concurrent refresh attempts would have the second one
+// fail against the now-already-rotated-out cookie.
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
 /**
- * Attempts to exchange the current refresh token for a new access token.
- * Exported so AuthProvider.refresh() shares this exact single-flight
- * implementation rather than duplicating the HTTP call.
+ * Exchanges the HttpOnly refresh cookie for a new access token. Takes no
+ * arguments and reads no token from JavaScript — the browser attaches the
+ * cookie itself (see performFetch's `credentials: "include"`), which is the
+ * whole point of the cookie architecture.
+ *
+ * Deliberately does NOT require an existing access token: at app startup
+ * there is none (memory was wiped by the reload) yet the cookie may still be
+ * perfectly valid. That is exactly the case this must handle.
+ *
+ * Exported so AuthProvider shares this single-flight implementation for both
+ * startup restoration and the background 401 retry, rather than duplicating
+ * the HTTP call.
  */
-export async function refreshAccessToken(): Promise<string | null> {
-  const current = getTokens();
-  if (!current) return null;
-
+export async function refreshAccessToken(): Promise<RefreshOutcome> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
+      // Snapshot the token this attempt is trying to replace. On failure we
+      // only clear if nothing else has signed in meanwhile — without this,
+      // the startup probe (which 401s for a visitor with no cookie) would
+      // race a login completing on the same page and wipe the session that
+      // login just established, bouncing the user straight back out.
+      const tokensAtStart = getTokens();
+      const discardIfUnchanged = () => {
+        if (getTokens() === tokensAtStart) clearTokens();
+      };
+
       try {
-        const response = await performFetch(
-          "/v1/auth/refresh",
-          { method: "POST", body: { refresh_token: current.refreshToken } },
-          null
-        );
+        const response = await performFetch("/v1/auth/refresh", { method: "POST" }, null);
 
         if (!response.ok) {
-          clearTokens();
+          discardIfUnchanged();
           return null;
         }
 
         const result = (await response.json()) as RefreshResponseBody;
-        setTokens({ accessToken: result.access_token, refreshToken: result.refresh_token });
-        return result.access_token;
+        setTokens({ accessToken: result.access_token });
+        return { accessToken: result.access_token, user: result.user ?? null };
       } catch {
-        clearTokens();
+        discardIfUnchanged();
         return null;
       } finally {
         refreshInFlight = null;
@@ -117,9 +140,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   let response = await performFetch(path, options, initialToken);
 
   if (response.status === 401 && initialToken && !NO_RETRY_PATHS.has(path)) {
-    const refreshedToken = await refreshAccessToken();
-    if (refreshedToken) {
-      response = await performFetch(path, options, refreshedToken);
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      response = await performFetch(path, options, refreshed.accessToken);
     }
   }
 

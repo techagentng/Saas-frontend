@@ -19,17 +19,21 @@ type TenantContextValue = {
 const TenantContext = createContext<TenantContextValue | null>(null);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const tenantsQuery = useTenants();
   const availableTenants = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data]);
   const persistedTenantId = usePersistedTenantId();
 
-  // A stale tenant selection must never carry across sessions or users.
+  // A stale tenant selection must never carry across sessions or users — but
+  // "not authenticated yet" is not the same as "signed out". During startup
+  // session restoration `isAuthenticated` is briefly false while the refresh
+  // cookie is still being exchanged; clearing here on that transient state
+  // would discard the user's workspace choice on every single page reload.
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       clearPersistedTenantId();
     }
-  }, [isAuthenticated]);
+  }, [isAuthLoading, isAuthenticated]);
 
   const currentTenant = useMemo(() => {
     if (!isAuthenticated) return null;
@@ -56,7 +60,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     clearPersistedTenantId();
   }, []);
 
-  const isTenantLoading = isAuthenticated && tenantsQuery.isLoading;
+  // Startup auth restoration counts as "still loading" here too: until it
+  // settles, `availableTenants` is an empty array only because no request has
+  // been made yet, and TenantGate must not mistake that for "this user has no
+  // workspaces" and redirect into onboarding.
+  const isTenantLoading = isAuthLoading || (isAuthenticated && tenantsQuery.isLoading);
 
   const value = useMemo<TenantContextValue>(
     () => ({

@@ -1,16 +1,29 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
 
 import { useTenant } from "@/providers/tenant-provider";
+import type { Tenant } from "@/types/tenant";
+
+/** F4 — Setup-incomplete is the mandatory presentational addition; business_type is not shown (kept minimal). */
+function tenantOptionLabel(tenant: Tenant): string {
+  return tenant.onboarding_status === "COMPLETED" ? tenant.name : `${tenant.name} — Setup incomplete`;
+}
 
 /**
  * Reads/writes TenantProvider directly — switching tenants only updates
  * local selection state; the backend re-verifies membership on every
  * request, so this is never treated as an authorization decision.
+ *
+ * F4: selecting an incomplete tenant routes into its resume onboarding
+ * page rather than leaving it sitting on a normal dashboard; selecting a
+ * completed one routes to /dashboard — so the user is never left stranded
+ * on a route belonging to whichever tenant was previously selected.
  */
 export function TenantSelector() {
   const { availableTenants, currentTenant, setCurrentTenant, isTenantLoading } = useTenant();
+  const router = useRouter();
 
   if (isTenantLoading) {
     return (
@@ -31,14 +44,17 @@ export function TenantSelector() {
   if (availableTenants.length === 1) {
     return (
       <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {availableTenants[0].name}
+        {tenantOptionLabel(availableTenants[0])}
       </span>
     );
   }
 
   function handleChange(event: ChangeEvent<HTMLSelectElement>) {
     const tenant = availableTenants.find((candidate) => candidate.id === event.target.value);
-    setCurrentTenant(tenant ?? null);
+    if (!tenant) return;
+
+    setCurrentTenant(tenant);
+    router.push(tenant.onboarding_status === "COMPLETED" ? "/dashboard" : `/onboarding/${tenant.id}`);
   }
 
   return (
@@ -56,7 +72,7 @@ export function TenantSelector() {
         )}
         {availableTenants.map((tenant) => (
           <option key={tenant.id} value={tenant.id}>
-            {tenant.name}
+            {tenantOptionLabel(tenant)}
           </option>
         ))}
       </select>
