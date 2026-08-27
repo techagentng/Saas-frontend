@@ -29,7 +29,7 @@ export default function ServicesPage() {
   if (isTenantLoading || !currentTenant) {
     return (
       <div role="status" aria-live="polite" className="py-16 text-center">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400">Loading…</span>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export default function ServicesPage() {
   if (!isSchedulingBusinessType(currentTenant.business_type)) {
     return (
       <Shell>
-        <p className="max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
           This workspace doesn&apos;t use a bookable service catalog. Services are available for
           appointment-based businesses.
         </p>
@@ -48,7 +48,7 @@ export default function ServicesPage() {
   if (!canReadServices) {
     return (
       <Shell>
-        <p className="max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
           You don&apos;t have permission to view services in this workspace.
         </p>
       </Shell>
@@ -80,8 +80,8 @@ function Shell({ subtitle, children }: { subtitle?: string; children: React.Reac
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <header>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Services</h1>
-        {subtitle && <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Services</h1>
+        {subtitle && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>}
       </header>
       {children}
     </div>

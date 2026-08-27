@@ -32,34 +32,34 @@ export function ServiceRow({
 
   return (
     <li
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:flex-row sm:items-start sm:gap-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950 ${
-        isArchived ? "opacity-70" : ""
+      className={`card flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4 sm:p-5 ${
+        isArchived ? "opacity-60" : ""
       }`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{service.name}</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{service.name}</h3>
           {isArchived && (
-            <span className="rounded-full border border-zinc-300 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+            <span className="rounded-full border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:text-slate-400">
               Archived
             </span>
           )}
         </div>
 
         {service.description && (
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{service.description}</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{service.description}</p>
         )}
 
         <dl className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
           <div className="flex items-baseline gap-1.5">
             <dt className="sr-only">Duration</dt>
-            <dd className="text-zinc-600 dark:text-zinc-400">
+            <dd className="text-slate-600 dark:text-slate-400">
               {formatDuration(service.duration_minutes)}
             </dd>
           </div>
           <div className="flex items-baseline gap-1.5">
             <dt className="sr-only">Price</dt>
-            <dd className="font-medium text-zinc-900 dark:text-zinc-100">
+            <dd className="font-medium text-slate-900 dark:text-slate-100">
               {/* The symbol is decorative; screen readers get the amount with
                   its currency code spelled out instead. Adjacent visible text
                   and a visually-hidden suffix concatenate without a separator
@@ -83,7 +83,7 @@ export function ServiceRow({
               // Named for the row it acts on: a column of identical "Edit"
               // buttons is unusable from a screen reader's element list.
               aria-label={`Edit ${service.name}`}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
             >
               Edit
             </button>
@@ -93,7 +93,7 @@ export function ServiceRow({
               type="button"
               onClick={onArchive}
               aria-label={`Archive ${service.name}`}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-rose-900 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 dark:border-slate-800 dark:text-slate-300 dark:hover:border-rose-900 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
             >
               Archive
             </button>

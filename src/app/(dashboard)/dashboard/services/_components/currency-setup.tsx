@@ -31,11 +31,11 @@ export function CurrencySetup({ tenantId }: { tenantId: string }) {
 
   if (!canSetCurrency) {
     return (
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+      <section className="card p-6">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
           Currency not set yet
         </h2>
-        <p className="mt-2 max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 max-w-prose text-sm text-slate-600 dark:text-slate-400">
           Services can&apos;t be priced until this workspace has a currency. Ask an owner to set
           it in workspace settings.
         </p>
@@ -67,11 +67,11 @@ export function CurrencySetup({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <section className="max-w-xl rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+    <section className="card max-w-xl p-6">
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
         Set your business currency
       </h2>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Prices for all services in this workspace will use this currency.
       </p>
 

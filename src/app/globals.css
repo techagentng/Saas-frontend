@@ -35,36 +35,64 @@
   }
 }
 
+/**
+ * `light dark` rather than `light`: with only `light` declared, the browser
+ * renders every native control — select popups, scrollbars, date pickers,
+ * autofill, form field internals — in its light theme even while the page
+ * around them is dark. `--surface-page` is the one page-level colour that
+ * non-Tailwind rules (the scrollbar gutter below) need to read directly.
+ */
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+  --surface-page: var(--color-white);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-page: var(--color-slate-950);
+  }
+}
+
+/**
+ * The dark background lives here, on <body>, and nowhere else. Without it the
+ * page stayed white while every `dark:bg-slate-*` component painted itself
+ * dark — dark cards floating on a white sheet, which is what "dark mode is
+ * broken" looked like. Component-level dark variants can only ever be correct
+ * if the surface underneath them is too.
+ */
 body {
-  @apply bg-white text-slate-900 font-sans antialiased;
+  @apply bg-white text-slate-900 font-sans antialiased dark:bg-slate-950 dark:text-slate-100;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-::selection { @apply bg-brand-600/15 text-brand-900; }
-:focus-visible { @apply outline-none ring-2 ring-brand-600/60 ring-offset-2 ring-offset-white rounded-md; }
+::selection { @apply bg-brand-600/15 text-brand-900 dark:bg-brand-400/25 dark:text-brand-50; }
+
+/* ring-offset must match the surface behind it, or the offset reads as a white halo in dark mode. */
+:focus-visible { @apply outline-none ring-2 ring-brand-600/60 ring-offset-2 ring-offset-white rounded-md dark:ring-brand-400/60 dark:ring-offset-slate-950; }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full; border: 2px solid white; }
-::-webkit-scrollbar-thumb:hover { @apply bg-slate-300; }
+::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full dark:bg-slate-700; border: 2px solid var(--surface-page); }
+::-webkit-scrollbar-thumb:hover { @apply bg-slate-300 dark:bg-slate-600; }
 
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-200 select-none whitespace-nowrap;
 }
 
 @layer components {
-  .btn-primary { @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:bg-brand-800; }
-  .btn-secondary { @apply btn bg-white text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 active:translate-y-0; }
-  
-  .card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft; }
-  .card-hover { @apply transition-all duration-300 hover:shadow-card hover:border-slate-300 hover:-translate-y-0.5; }
-  
-  .eyebrow { @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium uppercase tracking-wider text-slate-600 backdrop-blur; }
+  .btn-primary { @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:bg-brand-800 dark:bg-brand-500 dark:hover:bg-brand-600; }
+  .btn-secondary { @apply btn bg-white text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 active:translate-y-0 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-700; }
+
+  .card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft dark:bg-slate-900 dark:border-slate-800; }
+  .card-hover { @apply transition-all duration-300 hover:shadow-card hover:border-slate-300 hover:-translate-y-0.5 dark:hover:border-slate-700; }
+
+  /* `border-slate-200` is explicit: `border` alone leaves border-color at its
+     initial `currentColor`, which on this element is slate-900 — a near-black
+     1px outline on every light-mode input. */
+  .input-base { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-brand-500 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 dark:placeholder:text-slate-500 dark:hover:border-slate-600; }
+
+  .eyebrow { @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium uppercase tracking-wider text-slate-600 backdrop-blur dark:bg-slate-900/80 dark:border-slate-700 dark:text-slate-400; }
   .text-gradient-brand { @apply bg-clip-text text-transparent bg-gradient-to-br from-brand-600 via-brand-500 to-violet-500; }
   
   .bg-dot-grid { background-image: radial-gradient(circle, rgb(15 23 42 / 0.05) 1px, transparent 1px); background-size: 22px 22px; }

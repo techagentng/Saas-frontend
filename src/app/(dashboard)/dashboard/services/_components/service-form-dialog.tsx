@@ -218,7 +218,7 @@ export function ServiceFormDialog({
         </Field>
 
         <fieldset className="flex flex-col gap-1.5" disabled={mutation.isPending}>
-          <legend className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Duration</legend>
+          <legend className="text-sm font-medium text-slate-700 dark:text-slate-300">Duration</legend>
           <div className="flex flex-wrap gap-2">
             {DURATION_PRESETS_MINUTES.map((preset) => {
               const isSelected = durationMinutes === preset;
@@ -234,7 +234,7 @@ export function ServiceFormDialog({
                   className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                     isSelected
                       ? "border-brand-600 bg-brand-600 text-white"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
                   }`}
                 >
                   {formatDuration(preset)}
@@ -244,7 +244,7 @@ export function ServiceFormDialog({
           </div>
 
           <div className="mt-2 flex items-center gap-2">
-            <label htmlFor={durationId} className="text-xs text-zinc-500 dark:text-zinc-400">
+            <label htmlFor={durationId} className="text-xs text-slate-500 dark:text-slate-400">
               Or enter minutes
             </label>
             <input
@@ -265,7 +265,7 @@ export function ServiceFormDialog({
               className={`${fieldInputClass} w-28`}
             />
             {isCustomDuration && isValidDurationMinutes(durationMinutes) && (
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {formatDuration(durationMinutes)}
               </span>
             )}
@@ -289,7 +289,7 @@ export function ServiceFormDialog({
           <div className="flex items-stretch">
             <span
               aria-hidden="true"
-              className="inline-flex shrink-0 items-center rounded-l-xl border border-r-0 border-zinc-200 bg-zinc-50 px-3 text-sm font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
+              className="inline-flex shrink-0 items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
             >
               {currencyPrefix(currency).trim() || currency}
             </span>

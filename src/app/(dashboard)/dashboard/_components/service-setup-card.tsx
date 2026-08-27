@@ -49,11 +49,11 @@ export function ServiceSetupCard() {
 
   if (hasServices) {
     return (
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Services</h2>
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Services</h2>
+            <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
               {activeCount} {activeCount === 1 ? "service" : "services"} customers will be able to
               book.
             </p>
@@ -70,14 +70,14 @@ export function ServiceSetupCard() {
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+    <section className="card p-6">
       <p className="text-xs font-medium uppercase tracking-wider text-brand-600 dark:text-brand-400">
         Next step
       </p>
-      <h2 className="mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+      <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
         {canCreateServices ? "Add your services" : "No services yet"}
       </h2>
-      <p className="mt-1 max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 max-w-prose text-sm text-slate-600 dark:text-slate-400">
         {canCreateServices
           ? "Create the treatments and services customers will be able to book."
           : "This workspace hasn't added any bookable services yet."}

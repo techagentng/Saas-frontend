@@ -1,9 +1,17 @@
+import { CalendarDays, Clock, Contact, Users } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
+
 import { DashboardIcon } from "@/components/icons/dashboard-icon";
 import { ServicesIcon } from "@/components/icons/services-icon";
 import { SCHEDULING_BUSINESS_TYPES } from "@/lib/tenant/scheduling";
 import type { NavItem } from "@/types/navigation";
 import type { Permission } from "@/types/permission";
 import type { BusinessType } from "@/types/tenant";
+
+const TechniciansIcon = Users as ComponentType<SVGProps<SVGSVGElement>>;
+const AvailabilityIcon = Clock as ComponentType<SVGProps<SVGSVGElement>>;
+const BookingsIcon = CalendarDays as ComponentType<SVGProps<SVGSVGElement>>;
+const CustomersIcon = Contact as ComponentType<SVGProps<SVGSVGElement>>;
 
 /**
  * Configuration-driven sidebar nav. Entries are added only as the real route
@@ -24,6 +32,31 @@ export const dashboardNavItems: NavItem[] = [
     permission: "service.read",
     businessTypes: SCHEDULING_BUSINESS_TYPES,
   },
+];
+
+/**
+ * Roadmap entries, rendered as disabled rows with a "Soon" badge — never as
+ * links. They exist so the navigation communicates the shape of the product
+ * instead of looking unfinished, without the dishonesty of a clickable item
+ * that 404s.
+ *
+ * Deliberately kept out of `dashboardNavItems`: that list is the set of
+ * routes that actually exist and is what `filterNavItems` gates. Promoting one
+ * of these is a two-line move — add `href` + `permission` to the real list,
+ * delete the row here — once the feature that backs it ships.
+ */
+export type UpcomingNavItem = {
+  label: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /** The plan feature that will make this real, for whoever picks it up next. */
+  lands: string;
+};
+
+export const upcomingNavItems: UpcomingNavItem[] = [
+  { label: "Technicians", icon: TechniciansIcon, lands: "S4" },
+  { label: "Availability", icon: AvailabilityIcon, lands: "S6" },
+  { label: "Bookings", icon: BookingsIcon, lands: "S11" },
+  { label: "Customers", icon: CustomersIcon, lands: "S11" },
 ];
 
 /**

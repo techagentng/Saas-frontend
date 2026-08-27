@@ -30,7 +30,7 @@ export function TenantSelector() {
       <div
         role="status"
         aria-live="polite"
-        className="h-8 w-36 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900"
+        className="h-9 w-36 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800"
       >
         <span className="sr-only">Loading workspaces…</span>
       </div>
@@ -38,12 +38,12 @@ export function TenantSelector() {
   }
 
   if (availableTenants.length === 0) {
-    return <span className="text-sm text-zinc-400 dark:text-zinc-600">No workspace</span>;
+    return <span className="text-sm text-slate-400 dark:text-slate-600">No workspace</span>;
   }
 
   if (availableTenants.length === 1) {
     return (
-      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <span className="hidden text-sm font-medium text-slate-700 sm:inline dark:text-slate-300">
         {tenantOptionLabel(availableTenants[0])}
       </span>
     );
@@ -63,7 +63,7 @@ export function TenantSelector() {
       <select
         value={currentTenant?.id ?? ""}
         onChange={handleChange}
-        className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600"
       >
         {!currentTenant && (
           <option value="" disabled>

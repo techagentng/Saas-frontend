@@ -125,7 +125,7 @@ export function Dialog({ title, description, onClose, children, footer }: Dialog
         type="button"
         aria-label={`Close ${title}`}
         onClick={onClose}
-        className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
       />
 
       <div
@@ -136,14 +136,14 @@ export function Dialog({ title, description, onClose, children, footer }: Dialog
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-zinc-200 bg-white shadow-xl outline-none sm:rounded-2xl dark:border-zinc-800 dark:bg-zinc-950"
+        className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-xl outline-none sm:rounded-2xl dark:border-slate-700 dark:bg-slate-900"
       >
-        <div className="border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <h2 id={titleId} className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+        <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+          <h2 id={titleId} className="text-base font-semibold text-slate-900 dark:text-slate-50">
             {title}
           </h2>
           {description && (
-            <p id={descriptionId} className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p id={descriptionId} className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {description}
             </p>
           )}
@@ -152,7 +152,7 @@ export function Dialog({ title, description, onClose, children, footer }: Dialog
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
         {footer && (
-          <div className="flex flex-col-reverse gap-2 border-t border-zinc-200 px-5 py-4 sm:flex-row sm:justify-end dark:border-zinc-800">
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end dark:border-slate-800">
             {footer}
           </div>
         )}

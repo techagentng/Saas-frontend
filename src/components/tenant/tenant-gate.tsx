@@ -45,7 +45,7 @@ export function TenantGate({ children }: { children: ReactNode }) {
   if (isTenantLoading || hasNoTenants || needsResume) {
     return (
       <div className="flex flex-1 items-center justify-center py-32" role="status" aria-live="polite">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400">Loading…</span>
       </div>
     );
   }

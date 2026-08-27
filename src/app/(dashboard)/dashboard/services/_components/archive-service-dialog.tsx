@@ -72,7 +72,7 @@ export function ArchiveServiceDialog({
         </>
       }
     >
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         Archived services will no longer be available for future customer booking. They stay in
         your catalog marked as archived.
       </p>

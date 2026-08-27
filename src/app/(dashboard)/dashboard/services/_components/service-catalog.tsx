@@ -50,7 +50,7 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+        <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">
           {servicesQuery.isSuccess
             ? `${services.length} ${services.length === 1 ? "service" : "services"}`
             : "Your services"}
@@ -70,9 +70,9 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
         <div
           role="status"
           aria-live="polite"
-          className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950"
+          className="card p-6"
         >
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading services…</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400">Loading services…</span>
         </div>
       )}
 
@@ -95,12 +95,12 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
       )}
 
       {servicesQuery.isSuccess && services.length === 0 && (
-        <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-zinc-300 bg-white p-8 dark:border-zinc-700 dark:bg-zinc-950">
+        <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-slate-300 bg-white p-8 dark:border-slate-700 dark:bg-slate-900">
           <div>
-            <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">
               No services yet
             </h3>
-            <p className="mt-1 max-w-prose text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 max-w-prose text-sm text-slate-600 dark:text-slate-400">
               Add the services customers will be able to book — a name, how long it takes, and what
               it costs.
             </p>
@@ -114,7 +114,7 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
               Add service
             </button>
           ) : (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Ask an owner to add the first service.
             </p>
           )}
