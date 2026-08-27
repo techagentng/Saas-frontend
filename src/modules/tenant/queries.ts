@@ -2,7 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createTenant, getTenant, listTenants, updateTenantProfile } from "@/modules/tenant/api";
+import {
+  createTenant,
+  getTenant,
+  listTenants,
+  setTenantCurrency,
+  updateTenantProfile,
+} from "@/modules/tenant/api";
 import type { CreateTenantInput, UpdateTenantProfileInput } from "@/modules/tenant/api";
 import { tenantKeys } from "@/modules/tenant/keys";
 import { useAuth } from "@/providers/auth-provider";
@@ -70,6 +76,29 @@ export function useUpdateTenantProfile(tenantId: string) {
 
   return useMutation({
     mutationFn: (input: UpdateTenantProfileInput) => updateTenantProfile(tenantId, input),
+    onSuccess: (updatedTenant) => {
+      queryClient.setQueryData(tenantKeys.detail(tenantId), updatedTenant);
+      queryClient.setQueryData<Tenant[]>(tenantKeys.list(), (existing) =>
+        existing?.map((tenant) => (tenant.id === tenantId ? updatedTenant : tenant))
+      );
+      queryClient.invalidateQueries({ queryKey: tenantKeys.all });
+    },
+  });
+}
+
+/**
+ * Declares the workspace currency, once (Scheduling S1).
+ *
+ * Writes the response through the same two caches `useUpdateTenantProfile`
+ * does, so everything derived from them — TenantProvider's `currentTenant`,
+ * and therefore the Services page's read-only currency and its price
+ * formatting — reflects the new value immediately rather than after a refetch.
+ */
+export function useSetTenantCurrency(tenantId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (currency: string) => setTenantCurrency(tenantId, currency),
     onSuccess: (updatedTenant) => {
       queryClient.setQueryData(tenantKeys.detail(tenantId), updatedTenant);
       queryClient.setQueryData<Tenant[]>(tenantKeys.list(), (existing) =>

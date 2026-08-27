@@ -19,7 +19,14 @@ export type KnownPermissionCode =
   | "role.delete"
   | "role.assign"
   | "permission.read"
-  | "permission.assign";
+  | "permission.assign"
+  // Scheduling S1 (migration 000011_seed_service_permissions). BUSINESS_OWNER
+  // holds all four; STAFF holds `service.read` only — a technician needs to
+  // see the menu, while pricing and catalog structure are owner decisions.
+  | "service.read"
+  | "service.create"
+  | "service.update"
+  | "service.archive";
 
 /**
  * Backend-defined capability identifier. Not restricted to

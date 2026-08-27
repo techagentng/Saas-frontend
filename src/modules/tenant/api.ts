@@ -45,3 +45,24 @@ export function updateTenantProfile(
 ): Promise<Tenant> {
   return apiClient.patch<Tenant>(`/v1/tenants/${tenantId}`, input, { signal });
 }
+
+/**
+ * PUT /api/v1/tenants/{tenantID}/currency — `tenant.update` (Scheduling S1).
+ *
+ * Its own endpoint rather than a field on `UpdateTenantProfileInput`, because
+ * the two have different mutability rules: profile fields are freely
+ * re-editable, currency is **write-once**. Re-sending the value already stored
+ * is an idempotent success; sending a different one is refused with
+ * VALIDATION_FAILED. PUT rather than PATCH for that reason.
+ *
+ * The code is sent exactly as chosen — never upcased or trimmed here. The
+ * backend rejects rather than normalizes ("ngn", " NGN" are refused), so
+ * quietly repairing input on this side would only hide a bug in the picker.
+ */
+export function setTenantCurrency(
+  tenantId: string,
+  currency: string,
+  signal?: AbortSignal
+): Promise<Tenant> {
+  return apiClient.put<Tenant>(`/v1/tenants/${tenantId}/currency`, { currency }, { signal });
+}

@@ -3,22 +3,36 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { dashboardNavItems } from "@/lib/navigation/dashboard-nav";
-import { can, usePermissions } from "@/providers/permissions-provider";
+import { dashboardNavItems, filterNavItems } from "@/lib/navigation/dashboard-nav";
+import { usePermissions } from "@/providers/permissions-provider";
+import { useTenant } from "@/providers/tenant-provider";
 
 export function Sidebar() {
   const pathname = usePathname();
   const permissions = usePermissions();
+  const { currentTenant } = useTenant();
 
-  const items = dashboardNavItems.filter(
-    (item) => !item.permission || can(permissions, item.permission)
-  );
+  const items = filterNavItems(dashboardNavItems, {
+    permissions,
+    businessType: currentTenant?.business_type,
+  });
+
+  // Longest-prefix wins, so /dashboard/services highlights "Services" alone.
+  // A plain `startsWith` per item lit up "Dashboard" as well, since every
+  // dashboard route is nested under its href — invisible while "Dashboard"
+  // was the only entry, wrong the moment a second one exists.
+  const activeHref = items
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .reduce<string | null>(
+      (longest, item) => (longest === null || item.href.length > longest.length ? item.href : longest),
+      null
+    );
 
   return (
     <nav aria-label="Primary">
       <ul className="flex flex-col gap-1">
         {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = item.href === activeHref;
           const Icon = item.icon;
 
           return (

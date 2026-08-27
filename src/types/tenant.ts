@@ -37,6 +37,16 @@ export type Tenant = {
   onboarding_status: OnboardingStatus;
   /** Free-form resume pointer, not a typed enum — valid values depend on business_type. */
   onboarding_step: string | null;
+  /**
+   * ISO 4217 code every price in this workspace is denominated in
+   * (Scheduling S1). Null until the owner declares one, and **write-once**
+   * thereafter — readable here but writable only through
+   * `PUT /api/v1/tenants/{id}/currency`; the profile PATCH endpoint has no
+   * field for it. Typed as `string` rather than `CurrencyCode` because the
+   * backend allow-list is expected to grow and a value this build doesn't
+   * recognize must still round-trip; see `lib/money/currency.ts`.
+   */
+  currency: string | null;
   created_at: string;
   updated_at: string;
 };
