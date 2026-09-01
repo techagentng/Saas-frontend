@@ -34,30 +34,30 @@ export function LegalDocument({
       <Navbar />
       <main className="mx-auto w-full max-w-3xl px-5 pb-24 pt-32 sm:px-8">
         <p className="eyebrow w-fit">Legal</p>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
           {title}
         </h1>
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           Effective {effectiveDate} · Last updated {lastUpdated}
         </p>
 
         <div className="card mt-8 p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             In short
           </p>
-          <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-600">{summary}</div>
+          <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{summary}</div>
         </div>
 
         <nav aria-label="Contents" className="mt-10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Contents</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Contents</p>
           <ol className="mt-4 space-y-2">
             {sections.map((section, index) => (
               <li key={section.id} className="text-sm">
                 <a
                   href={`#${section.id}`}
-                  className="text-slate-600 underline-offset-4 hover:text-brand-600 hover:underline"
+                  className="text-slate-600 dark:text-slate-400 underline-offset-4 hover:text-brand-600 hover:underline"
                 >
-                  <span className="tabular-nums text-slate-400">{index + 1}.</span> {section.title}
+                  <span className="tabular-nums text-slate-400 dark:text-slate-500">{index + 1}.</span> {section.title}
                 </a>
               </li>
             ))}
@@ -67,10 +67,10 @@ export function LegalDocument({
         <div className="mt-12 space-y-12">
           {sections.map((section, index) => (
             <section key={section.id} id={section.id} className="scroll-mt-28">
-              <h2 className="text-lg font-semibold tracking-tight text-slate-900">
-                <span className="tabular-nums text-slate-400">{index + 1}.</span> {section.title}
+              <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                <span className="tabular-nums text-slate-400 dark:text-slate-500">{index + 1}.</span> {section.title}
               </h2>
-              <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600">
+              <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                 {section.body}
               </div>
             </section>
@@ -90,7 +90,7 @@ export function LegalList({ children }: { children: ReactNode }) {
 /** Emphasised aside for the points users most often miss. */
 export function LegalNote({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4 text-sm leading-relaxed text-slate-700">
+    <div className="rounded-xl border border-brand-200 dark:border-brand-900 bg-brand-50/60 dark:bg-brand-950/30 p-4 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
       {children}
     </div>
   );
@@ -101,7 +101,7 @@ export function LegalMail({ address }: { address: string }) {
   return (
     <a
       href={`mailto:${address}`}
-      className="font-medium text-brand-600 underline-offset-4 hover:underline"
+      className="font-medium text-brand-600 dark:text-brand-400 underline-offset-4 hover:underline"
     >
       {address}
     </a>

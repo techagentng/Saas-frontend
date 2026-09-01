@@ -118,7 +118,7 @@ export default function OnboardingResumePage() {
   ) {
     return (
       <div className="flex flex-1 items-center justify-center py-24" role="status" aria-live="polite">
-        <span className="text-sm text-slate-500">Loading…</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400">Loading…</span>
       </div>
     );
   }
@@ -127,8 +127,8 @@ export default function OnboardingResumePage() {
     return (
       <div className="flex flex-1 items-center justify-center px-5 py-24">
         <div className="card max-w-md p-8 text-center shadow-card">
-          <h1 className="text-lg font-semibold text-slate-900">Workspace unavailable</h1>
-          <p className="mt-2 text-sm text-slate-600" role="alert">
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Workspace unavailable</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400" role="alert">
             {tenantQuery.isError ? errorMessageFor(tenantQuery.error) : "This workspace isn't available."}
           </p>
           <button type="button" onClick={() => router.push("/dashboard")} className="btn-primary mt-6 h-11 px-5 text-sm">
@@ -146,8 +146,8 @@ export default function OnboardingResumePage() {
     return (
       <div className="flex flex-1 items-center justify-center px-5 py-24">
         <div className="card max-w-md p-8 text-center shadow-card">
-          <h1 className="text-lg font-semibold text-slate-900">Setup isn&apos;t available to you</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Setup isn&apos;t available to you</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {tenant.name} is still being set up, and your account doesn&apos;t have permission to change this
             workspace. Ask an owner to finish setup.
           </p>

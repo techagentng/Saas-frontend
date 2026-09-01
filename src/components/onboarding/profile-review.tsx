@@ -34,9 +34,9 @@ export function ProfileReview({ tenant }: { tenant: Tenant }) {
       <dl className="divide-y divide-slate-100">
         {rows.map((row) => (
           <div key={row.label} className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:items-baseline sm:gap-6">
-            <dt className="w-40 shrink-0 text-sm font-medium text-slate-500">{row.label}</dt>
+            <dt className="w-40 shrink-0 text-sm font-medium text-slate-500 dark:text-slate-400">{row.label}</dt>
             <dd
-              className={`min-w-0 break-words text-sm ${row.muted ? "text-slate-400" : "text-slate-900"}`}
+              className={`min-w-0 break-words text-sm ${row.muted ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"}`}
             >
               {row.value}
             </dd>

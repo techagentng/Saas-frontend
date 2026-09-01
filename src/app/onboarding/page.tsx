@@ -9,8 +9,8 @@ export default function OnboardingPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
             New workspace
           </span>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">Create your business</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Create your business</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Set up your workspace to get started. You can finish the details next.
           </p>
         </div>

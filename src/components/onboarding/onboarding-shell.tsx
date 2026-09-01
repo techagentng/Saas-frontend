@@ -96,7 +96,7 @@ export function OnboardingShell({
     <div className="flex min-h-full flex-1 flex-col" onKeyDown={handleKeyDown}>
       <header className="flex items-center justify-between gap-4 px-5 py-5 sm:px-8">
         <Logo />
-        <p aria-live="polite" className="text-xs font-medium text-slate-500">
+        <p aria-live="polite" className="text-xs font-medium text-slate-500 dark:text-slate-400">
           {saveStatus === "saving" && "Saving…"}
           {saveStatus === "saved" && "Saved"}
         </p>
@@ -105,10 +105,10 @@ export function OnboardingShell({
       <main className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8 sm:py-12">
         <div key={screenKey} className="w-full max-w-2xl animate-fade-up">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-sm font-bold tabular-nums tracking-widest text-brand-600">
+            <span className="text-sm font-bold tabular-nums tracking-widest text-brand-600 dark:text-brand-400">
               {String(stepIndex + 1).padStart(2, "0")}
             </span>
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {tenant.name} · {businessTypeLabel(tenant.business_type)}
             </span>
           </div>
@@ -116,11 +116,11 @@ export function OnboardingShell({
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="mt-5 text-3xl font-bold leading-tight tracking-tight text-slate-900 outline-none sm:text-4xl"
+            className="mt-5 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white outline-none sm:text-4xl"
           >
             {title}
           </h1>
-          <p className="mt-3 max-w-xl text-base text-slate-600">{description}</p>
+          <p className="mt-3 max-w-xl text-base text-slate-600 dark:text-slate-400">{description}</p>
 
           <div className="mt-8">{children}</div>
 
@@ -160,14 +160,14 @@ export function OnboardingShell({
                 </>
               )}
             </button>
-            <p className="hidden text-xs text-slate-400 sm:ml-1 sm:block">
+            <p className="hidden text-xs text-slate-400 dark:text-slate-500 sm:ml-1 sm:block">
               Press Enter <kbd className="font-sans">↵</kbd>
             </p>
           </div>
         </div>
       </main>
 
-      <footer className="border-t border-slate-200/80 bg-white/60 px-5 py-4 backdrop-blur sm:px-8">
+      <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-white/60 dark:bg-slate-950/60 px-5 py-4 backdrop-blur sm:px-8">
         <div className="mx-auto max-w-2xl">
           <StepIndicator currentIndex={stepIndex} total={stepTotal} />
         </div>

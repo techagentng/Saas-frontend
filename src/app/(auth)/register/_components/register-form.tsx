@@ -77,19 +77,19 @@ export function RegisterForm() {
   }
 
   const inputBase =
-    "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-brand-500 disabled:opacity-60 disabled:cursor-not-allowed";
-  const inputBorder = "border-slate-200 hover:border-slate-300";
+    "w-full rounded-xl border bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-brand-500 disabled:opacity-60 disabled:cursor-not-allowed";
+  const inputBorder = "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700";
 
   return (
     <div className="card w-full max-w-md p-6 shadow-card sm:p-8">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Create your account</h1>
-        <p className="mt-2 text-sm text-slate-600">Set up your business in a couple of minutes.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Create your account</h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Set up your business in a couple of minutes.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
-          <label htmlFor={emailId} className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor={emailId} className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Email address
           </label>
           <input
@@ -105,7 +105,7 @@ export function RegisterForm() {
         </div>
 
         <div>
-          <label htmlFor={passwordId} className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor={passwordId} className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Password
           </label>
           <PasswordInput
@@ -119,13 +119,13 @@ export function RegisterForm() {
             disabled={isSubmitting}
             aria-describedby={`${passwordId}-hint`}
           />
-          <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-slate-500">
+          <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
             At least {MIN_PASSWORD_LENGTH} characters.
           </p>
         </div>
 
         <div>
-          <label htmlFor={confirmPasswordId} className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor={confirmPasswordId} className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Confirm password
           </label>
           <PasswordInput
@@ -165,9 +165,9 @@ export function RegisterForm() {
         </button>
       </form>
 
-      <p className="mt-8 text-center text-sm text-slate-600">
+      <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-brand-600 hover:text-brand-700">
+        <Link href="/login" className="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700">
           Sign in
         </Link>
       </p>

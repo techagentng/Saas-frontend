@@ -65,16 +65,16 @@ export function LoginForm() {
   }
 
   const inputBase =
-    "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-brand-500 disabled:opacity-60 disabled:cursor-not-allowed";
-  const inputBorder = "border-slate-200 hover:border-slate-300";
+    "w-full rounded-xl border bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-brand-500 disabled:opacity-60 disabled:cursor-not-allowed";
+  const inputBorder = "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700";
 
   return (
     <div className="card w-full max-w-md p-6 sm:p-8 shadow-card">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           Sign in to your account
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           Welcome back. Please enter your details.
         </p>
       </div>
@@ -105,10 +105,10 @@ export function LoginForm() {
       {/* Divider */}
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-slate-200" />
+          <div className="w-full border-t border-slate-200 dark:border-slate-800" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-2 text-xs font-medium uppercase tracking-wider text-slate-400">
+          <span className="bg-white dark:bg-slate-900 px-2 text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Or
           </span>
         </div>
@@ -119,7 +119,7 @@ export function LoginForm() {
         <div>
           <label
             htmlFor={emailId}
-            className="mb-1.5 block text-sm font-medium text-slate-700"
+            className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             Email address
           </label>
@@ -139,13 +139,13 @@ export function LoginForm() {
           <div className="mb-1.5 flex items-center justify-between">
             <label
               htmlFor={passwordId}
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300"
             >
               Password
             </label>
             <Link
               href="/forgot-password"
-              className="text-xs font-medium text-brand-600 hover:text-brand-700"
+              className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700"
             >
               Forgot password?
             </Link>
@@ -190,11 +190,11 @@ export function LoginForm() {
         </button>
       </form>
 
-      <p className="mt-8 text-center text-sm text-slate-600">
+      <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
-          className="font-semibold text-brand-600 hover:text-brand-700"
+          className="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700"
         >
           Get started
         </Link>

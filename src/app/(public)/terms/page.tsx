@@ -33,7 +33,7 @@ const SECTIONS: readonly LegalSection[] = [
           you have the authority to bind it, and “you” means that organisation.
         </p>
         <p>
-          Our <Link href="/privacy" className="font-medium text-brand-600 underline-offset-4 hover:underline">Privacy Policy</Link>{" "}
+          Our <Link href="/privacy" className="font-medium text-brand-600 dark:text-brand-400 underline-offset-4 hover:underline">Privacy Policy</Link>{" "}
           explains how we handle information and forms part of this agreement.
         </p>
       </>
@@ -143,21 +143,21 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <LegalList>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               The booking is between you and your customer.
             </strong>{" "}
             We are not a party to it. We do not supply the service being booked, and we make no
             promises to your customers about it on your behalf.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               You set and honour your own policies.
             </strong>{" "}
             Cancellations, no-shows, deposits, refunds, rescheduling, and complaints are yours to
             define and to handle. Publish them clearly to your customers.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               You control your customers’ personal data.
             </strong>{" "}
             You decide what you collect and why. You must have your own privacy notice, a lawful
@@ -165,7 +165,7 @@ const SECTIONS: readonly LegalSection[] = [
             We process that data only on your instructions.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               You meet the rules of your own industry.
             </strong>{" "}
             Licensing, health and safety, hygiene, consumer protection, tax, and any

@@ -4,8 +4,8 @@ import Link from "next/link";
 export default function ForgotPasswordPage() {
   return (
     <div className="card w-full max-w-md p-6 text-center shadow-card sm:p-8">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Reset your password</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Reset your password</h1>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Password reset isn&apos;t available yet. We&apos;re still building this — check back soon.
       </p>
       <Link href="/login" className="btn-primary mt-6 inline-flex h-11 items-center px-6 text-sm">

@@ -46,7 +46,7 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <LegalList>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               Information about businesses that use {LEGAL.productName}.
             </strong>{" "}
             When you register an account, create a workspace, and set up your services, we decide
@@ -54,7 +54,7 @@ const SECTIONS: readonly LegalSection[] = [
             describes what we do.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               Information about a business’s own customers.
             </strong>{" "}
             When someone books an appointment, a table, a room, or a ride through a business’s
@@ -78,35 +78,35 @@ const SECTIONS: readonly LegalSection[] = [
     body: (
       <>
         <p>
-          <strong className="font-semibold text-slate-900">Account information.</strong> To create
+          <strong className="font-semibold text-slate-900 dark:text-white">Account information.</strong> To create
           an account we ask for an email address and a password, and nothing else. We do not ask
           for your name at sign-up. Your password is never stored in a readable form — only a
           cryptographic hash of it is kept, which cannot be reversed back into your password. We
           also record your account status and the times your account was created and last updated.
         </p>
         <p>
-          <strong className="font-semibold text-slate-900">Workspace information.</strong> When you
+          <strong className="font-semibold text-slate-900 dark:text-white">Workspace information.</strong> When you
           set up a business you provide a business name, a URL for your booking page, and
           optionally a description, a contact email address, a contact phone number, and a
           timezone. You also tell us your type of business — currently nail technician, restaurant,
           hotel, or transport — which determines which features your dashboard shows.
         </p>
         <p>
-          <strong className="font-semibold text-slate-900">Service catalogue.</strong> The services
+          <strong className="font-semibold text-slate-900 dark:text-white">Service catalogue.</strong> The services
           you offer, along with their descriptions, durations, prices, and currency, and whether a
           service is active or archived.
         </p>
         <p>
-          <strong className="font-semibold text-slate-900">Team information.</strong> The people
+          <strong className="font-semibold text-slate-900 dark:text-white">Team information.</strong> The people
           you invite to your workspace, the roles you assign them, and the permissions those roles
           carry.
         </p>
         <p>
-          <strong className="font-semibold text-slate-900">Booking information.</strong> Details
+          <strong className="font-semibold text-slate-900 dark:text-white">Booking information.</strong> Details
           your customers submit when booking with you, held on your behalf as described above.
         </p>
         <p>
-          <strong className="font-semibold text-slate-900">Technical information.</strong> Our
+          <strong className="font-semibold text-slate-900 dark:text-white">Technical information.</strong> Our
           servers record standard request data — IP address, browser and device type, pages
           requested, and timestamps — which we use to keep the Service running, to enforce rate
           limits, and to investigate abuse and security incidents.
@@ -122,25 +122,25 @@ const SECTIONS: readonly LegalSection[] = [
         <p>Being specific about this is more useful than a long list of what we might collect.</p>
         <LegalList>
           <li>
-            <strong className="font-semibold text-slate-900">No card or bank details.</strong>{" "}
+            <strong className="font-semibold text-slate-900 dark:text-white">No card or bank details.</strong>{" "}
             {LEGAL.productName} does not process payments and has no payment provider connected.
             Money between a business and its customers is handled entirely outside the Service.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               No advertising or analytics trackers.
             </strong>{" "}
             We run no third-party analytics, no advertising pixels, and no cross-site tracking.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               No sale of personal information.
             </strong>{" "}
             We do not sell, rent, or trade personal information, and we do not share it with data
             brokers or advertisers.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">
+            <strong className="font-semibold text-slate-900 dark:text-white">
               No special-category data by design.
             </strong>{" "}
             We do not ask for health, biometric, religious, or similar sensitive information.
@@ -163,14 +163,14 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <LegalList>
           <li>
-            <strong className="font-semibold text-slate-900">Session refresh cookie.</strong> Set
+            <strong className="font-semibold text-slate-900 dark:text-white">Session refresh cookie.</strong> Set
             when you sign in and marked HttpOnly, so JavaScript on the page cannot read it. Its
             path is restricted to our authentication endpoints, so the browser only sends it where
             it is needed. It lets you stay signed in across page reloads, and it is replaced with a
             fresh value each time it is used.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">Access token.</strong> Held only in
+            <strong className="font-semibold text-slate-900 dark:text-white">Access token.</strong> Held only in
             your browser’s memory for the duration of the tab. It is never written to a cookie or
             to local storage, and it disappears when you close or reload the tab.
           </li>
@@ -192,28 +192,28 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <LegalList>
           <li>
-            <strong className="font-semibold text-slate-900">To provide the Service</strong> —
+            <strong className="font-semibold text-slate-900 dark:text-white">To provide the Service</strong> —
             creating your account, running your workspace, publishing your booking page, and
             storing your bookings. Basis: performance of our contract with you.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">To keep the Service secure</strong> —
+            <strong className="font-semibold text-slate-900 dark:text-white">To keep the Service secure</strong> —
             authenticating sign-ins, enforcing rate limits, isolating each workspace’s data, and
             investigating abuse. Basis: our legitimate interest in a secure platform.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">To support you</strong> — responding
+            <strong className="font-semibold text-slate-900 dark:text-white">To support you</strong> — responding
             when you contact us and sending essential notices about your account or material
             changes to the Service. Basis: performance of our contract and our legitimate
             interests.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">To improve the Service</strong> —
+            <strong className="font-semibold text-slate-900 dark:text-white">To improve the Service</strong> —
             understanding which features are used and where errors occur, using aggregated and
             operational data. Basis: our legitimate interests.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">To meet legal obligations</strong> —
+            <strong className="font-semibold text-slate-900 dark:text-white">To meet legal obligations</strong> —
             where the law requires us to retain or disclose information. Basis: legal obligation.
           </li>
         </LegalList>
@@ -245,24 +245,24 @@ const SECTIONS: readonly LegalSection[] = [
         <p>We share information only in these situations:</p>
         <LegalList>
           <li>
-            <strong className="font-semibold text-slate-900">Service providers.</strong> Companies
+            <strong className="font-semibold text-slate-900 dark:text-white">Service providers.</strong> Companies
             that host our infrastructure, store our database, and deliver our transactional email.
             They act on our instructions, may only use the information to provide their service to
             us, and are bound by confidentiality obligations.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">Within your workspace.</strong>{" "}
+            <strong className="font-semibold text-slate-900 dark:text-white">Within your workspace.</strong>{" "}
             Information in a workspace is visible to the members of that workspace according to the
             roles and permissions its owner has assigned.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">Legal requirements.</strong> Where we
+            <strong className="font-semibold text-slate-900 dark:text-white">Legal requirements.</strong> Where we
             are required to disclose information by law, by a court, or by a competent regulator,
             or where disclosure is necessary to protect our rights, safety, or property, or those
             of our users or the public.
           </li>
           <li>
-            <strong className="font-semibold text-slate-900">Business transfers.</strong> If we are
+            <strong className="font-semibold text-slate-900 dark:text-white">Business transfers.</strong> If we are
             involved in a merger, acquisition, financing, or sale of assets, information may be
             transferred as part of that transaction. We will notify you before your information
             becomes subject to a materially different privacy policy.
@@ -307,25 +307,25 @@ const SECTIONS: readonly LegalSection[] = [
     body: (
       <LegalList>
         <li>
-          <strong className="font-semibold text-slate-900">Account and workspace data</strong> —
+          <strong className="font-semibold text-slate-900 dark:text-white">Account and workspace data</strong> —
           for as long as your account is open.
         </li>
         <li>
-          <strong className="font-semibold text-slate-900">After you close your account</strong> —
+          <strong className="font-semibold text-slate-900 dark:text-white">After you close your account</strong> —
           deleted or irreversibly anonymised within 90 days, except where we must keep it longer to
           comply with a legal obligation or to resolve a dispute.
         </li>
         <li>
-          <strong className="font-semibold text-slate-900">Booking data</strong> — retained for as
+          <strong className="font-semibold text-slate-900 dark:text-white">Booking data</strong> — retained for as
           long as the business that collected it maintains its workspace, and deleted on that
           business’s instruction.
         </li>
         <li>
-          <strong className="font-semibold text-slate-900">Security and request logs</strong> —
+          <strong className="font-semibold text-slate-900 dark:text-white">Security and request logs</strong> —
           typically kept for up to 12 months.
         </li>
         <li>
-          <strong className="font-semibold text-slate-900">Backups</strong> — deleted data may
+          <strong className="font-semibold text-slate-900 dark:text-white">Backups</strong> — deleted data may
           persist in encrypted backups for a short period before those backups expire on their
           normal cycle.
         </li>

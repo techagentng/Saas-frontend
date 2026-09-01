@@ -82,7 +82,7 @@ export function CreateTenantForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={nameId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={nameId} className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Business name
         </label>
         <input
@@ -92,12 +92,12 @@ export function CreateTenantForm() {
           required
           value={name}
           onChange={(event) => handleNameChange(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-colors hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white transition-colors hover:border-slate-300 dark:hover:border-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={businessTypeId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={businessTypeId} className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Business type
         </label>
         <select
@@ -106,7 +106,7 @@ export function CreateTenantForm() {
           required
           value={businessType}
           onChange={(event) => setBusinessType(event.target.value as BusinessType)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-colors hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white transition-colors hover:border-slate-300 dark:hover:border-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
         >
           <option value="" disabled>
             Select a business type
@@ -120,7 +120,7 @@ export function CreateTenantForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={slugId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={slugId} className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Slug
         </label>
         <input
@@ -135,7 +135,7 @@ export function CreateTenantForm() {
             setIsSlugTouched(true);
             setSlug(slugify(event.target.value));
           }}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-colors hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white transition-colors hover:border-slate-300 dark:hover:border-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/40"
         />
       </div>
 

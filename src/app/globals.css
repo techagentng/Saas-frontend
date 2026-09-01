@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/**
+ * Dark mode is driven by `data-theme="dark"` on <html>, NOT by the OS.
+ *
+ * Tailwind's stock `dark:` variant is `@media (prefers-color-scheme: dark)`,
+ * which made the theme entirely involuntary: a visitor whose OS was dark got
+ * dark styling on every component that happened to define a `dark:` variant
+ * (the dashboard) while every component that didn't (marketing, auth,
+ * onboarding, legal) stayed light — a page half in each theme. Binding the
+ * variant to an explicit attribute means nothing turns dark unless the user
+ * asks for it, and `data-theme="light"` in the layout is the default.
+ *
+ * The `:where()` keeps specificity at zero so `dark:` utilities still cascade
+ * against their light counterparts in source order, exactly as before.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
@@ -36,21 +52,23 @@
 }
 
 /**
- * `light dark` rather than `light`: with only `light` declared, the browser
- * renders every native control — select popups, scrollbars, date pickers,
- * autofill, form field internals — in its light theme even while the page
- * around them is dark. `--surface-page` is the one page-level colour that
- * non-Tailwind rules (the scrollbar gutter below) need to read directly.
+ * `color-scheme` is declared per theme rather than as `light dark`, so the
+ * browser's own chrome — select popups, date pickers, autofill, form field
+ * internals — follows the theme the user chose here instead of the one their
+ * OS is set to. With `light dark` those controls tracked the OS and could
+ * render dark inside an explicitly light page.
+ *
+ * `--surface-page` is the one page-level colour that non-Tailwind rules (the
+ * scrollbar gutter below) need to read directly.
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --surface-page: var(--color-white);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-page: var(--color-slate-950);
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-page: var(--color-slate-950);
 }
 
 /**
@@ -95,7 +113,11 @@ body {
   .eyebrow { @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium uppercase tracking-wider text-slate-600 backdrop-blur dark:bg-slate-900/80 dark:border-slate-700 dark:text-slate-400; }
   .text-gradient-brand { @apply bg-clip-text text-transparent bg-gradient-to-br from-brand-600 via-brand-500 to-violet-500; }
   
+  /* Dark ink dots read as grime on a dark surface, so the grid inverts with
+     the theme. `bg-dot-grid-dark` below stays fixed: it is used on panels that
+     are dark in both themes (the final CTA, the multi-tenant section). */
   .bg-dot-grid { background-image: radial-gradient(circle, rgb(15 23 42 / 0.05) 1px, transparent 1px); background-size: 22px 22px; }
+  :root[data-theme="dark"] .bg-dot-grid { background-image: radial-gradient(circle, rgb(255 255 255 / 0.06) 1px, transparent 1px); }
   .bg-dot-grid-dark { background-image: radial-gradient(circle, rgb(255 255 255 / 0.06) 1px, transparent 1px); background-size: 22px 22px; }
 }
 

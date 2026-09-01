@@ -9,20 +9,20 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 sm:py-24 lg:py-28 bg-slate-50/60 border-t border-slate-100">
+    <section id="how-it-works" className="py-20 sm:py-24 lg:py-28 bg-slate-50/60 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
       <div className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-10">
         <div className="max-w-2xl">
           <Reveal><span className="eyebrow"><span className="h-1.5 w-1.5 rounded-full bg-violet-500" />How it works</span></Reveal>
-          <Reveal delay={60}><h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Live in four simple steps.</h2></Reveal>
+          <Reveal delay={60}><h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Live in four simple steps.</h2></Reveal>
         </div>
         <ol className="mt-14 grid gap-6 md:grid-cols-4 md:gap-5">
           {steps.map((s, i) => (
             <Reveal key={s.no} delay={i * 100}>
               <li className="relative h-full">
                 <div className="card h-full p-7">
-                  <span className="text-sm font-bold tracking-widest text-brand-600">{s.no}</span>
-                  <h3 className="mt-3 text-lg font-semibold text-slate-900">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.desc}</p>
+                  <span className="text-sm font-bold tracking-widest text-brand-600 dark:text-brand-400">{s.no}</span>
+                  <h3 className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{s.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{s.desc}</p>
                 </div>
                 {i < steps.length - 1 && (
                   <div className="absolute -right-3 top-1/2 hidden -translate-y-1/2 md:block">

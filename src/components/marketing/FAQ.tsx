@@ -35,12 +35,12 @@ export function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-20 sm:py-24 lg:py-28 bg-white border-t border-slate-100">
+    <section id="faq" className="py-20 sm:py-24 lg:py-28 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
       <div className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-10">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
           <div className="lg:col-span-4">
             <Reveal><span className="eyebrow"><span className="h-1.5 w-1.5 rounded-full bg-brand-500" />FAQ</span></Reveal>
-            <Reveal delay={60}><h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Questions, answered.</h2></Reveal>
+            <Reveal delay={60}><h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Questions, answered.</h2></Reveal>
           </div>
 
           <div className="lg:col-span-8">
@@ -54,12 +54,12 @@ export function FAQ() {
                       onClick={() => setOpen(open === i ? null : i)}
                       aria-expanded={open === i}
                     >
-                      <span className="text-sm font-semibold text-slate-900 sm:text-base">{f.q}</span>
-                      <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-300 ${open === i ? "rotate-180" : ""}`} />
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{f.q}</span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500 transition-transform duration-300 ${open === i ? "rotate-180" : ""}`} />
                     </button>
                     <div className={`grid transition-all duration-300 ease-out ${open === i ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                       <div className="overflow-hidden">
-                        <p className="px-5 pb-5 text-sm leading-relaxed text-slate-600">{f.a}</p>
+                        <p className="px-5 pb-5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{f.a}</p>
                       </div>
                     </div>
                   </div>

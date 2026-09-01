@@ -25,8 +25,8 @@ export function TenantWorkspaces() {
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${tenant.color} text-sm font-bold text-white shadow-sm`}>{tenant.initial}</div>
                   <p className="mt-4 text-sm font-semibold text-white">{tenant.name}</p>
                   <div className="mt-3 space-y-1.5 border-t border-white/5 pt-3">
-                    <p className="text-[10px] text-slate-400">Bookings • Staff</p>
-                    <p className="text-[10px] text-slate-400">Services • Settings</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Bookings • Staff</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Services • Settings</p>
                   </div>
                 </div>
               ))}

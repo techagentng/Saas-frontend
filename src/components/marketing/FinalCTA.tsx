@@ -3,10 +3,10 @@ import { Reveal } from "@/components/ui/Reveal";
 
 export function FinalCTA() {
   return (
-    <section className="relative overflow-hidden border-t border-slate-100 bg-white py-20 sm:py-24">
+    <section className="relative overflow-hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 py-20 sm:py-24">
       <div className="mx-auto w-full max-w-3xl px-5 sm:px-8 lg:px-10">
         <Reveal>
-          <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-ink via-ink-soft to-ink p-10 text-center shadow-card sm:p-14">
+          <div className="relative overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-ink via-ink-soft to-ink p-10 text-center shadow-card sm:p-14">
             <div className="absolute inset-0 bg-dot-grid-dark opacity-40" />
             <div className="absolute left-1/2 top-0 h-72 w-[640px] -translate-x-1/2 rounded-full opacity-60 blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgb(99 102 241 / 0.45), transparent 70%)" }} />
             <div className="relative">
