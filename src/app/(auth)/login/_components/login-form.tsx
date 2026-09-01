@@ -5,7 +5,8 @@ import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
-import { apiErrorMessage } from "@/lib/api/error-messages";
+import { apiErrorMessage, messageForCode } from "@/lib/api/error-messages";
+import { googleSignInUrl } from "@/modules/auth/api";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,18 @@ function errorMessageFor(error: unknown): string {
   return apiErrorMessage(error, {
     VALIDATION_FAILED: "Enter a valid email address and your password.",
   });
+}
+
+/**
+ * Copy for a failed Google sign-in. The backend callback has no response body
+ * to fail into - it is a browser redirect - so it reports the failure as an
+ * `auth_error` code on this page's URL. Unknown codes fall back to generic
+ * wording rather than rendering the raw parameter, which is untrusted input.
+ */
+function googleErrorMessageFor(code: string): string {
+  return (
+    messageForCode(code) ?? "We couldn't complete sign-in with Google. Please try again."
+  );
 }
 
 export function LoginForm() {
@@ -26,6 +39,12 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Preserved through the OAuth round trip so someone bounced to /login from a
+  // deep link lands back there after signing in with Google, exactly as they
+  // would after a password login. The backend re-validates it.
+  const redirectTo = searchParams.get("redirect");
+  const googleError = searchParams.get("auth_error");
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -37,8 +56,7 @@ export function LoginForm() {
 
     try {
       await login({ email, password });
-      const redirectTo = searchParams.get("redirect") || "/dashboard";
-      router.replace(redirectTo);
+      router.replace(redirectTo || "/dashboard");
     } catch (err) {
       setError(errorMessageFor(err));
     } finally {
@@ -61,10 +79,22 @@ export function LoginForm() {
         </p>
       </div>
 
-      {/* Google OAuth Button */}
+      {googleError && (
+        <div
+          role="alert"
+          className="mb-6 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-700 animate-fade-in"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{googleErrorMessageFor(googleError)}</span>
+        </div>
+      )}
+
+      {/* Google OAuth Button. A plain anchor, deliberately: the flow is a chain
+          of top-level redirects the browser must follow itself, and no
+          authorization code is ever exchanged in this JavaScript. */}
       <div className="mb-6">
         <a
-          href="/api/auth/google" // Standard NextAuth/Custom OAuth route placeholder
+          href={googleSignInUrl(redirectTo)}
           className="btn-secondary h-11 w-full text-sm"
         >
           <GoogleIcon className="h-4 w-4" />
