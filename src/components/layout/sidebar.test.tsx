@@ -78,13 +78,29 @@ describe("Sidebar — never renders empty", () => {
   });
 
   it("shows the roadmap group as non-clickable rows, never as links", () => {
+    // "Technicians" was promoted out of this list into the real nav (as
+    // "Team") when Scheduling S3 shipped — see dashboard-nav.ts.
     setup({ permissions: ["service.read"] });
 
-    for (const label of ["Technicians", "Availability", "Bookings", "Customers"]) {
+    for (const label of ["Availability", "Bookings", "Customers"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: new RegExp(label, "i") })).not.toBeInTheDocument();
     }
-    expect(screen.getAllByText("Soon")).toHaveLength(4);
+    expect(screen.getAllByText("Soon")).toHaveLength(3);
+  });
+});
+
+describe("Sidebar — Team (Scheduling S3)", () => {
+  it("shows Team for a tenant with staff.read, regardless of business type", () => {
+    setup({ permissions: ["staff.read"], businessType: "RESTAURANT" });
+
+    expect(screen.getByRole("link", { name: "Team" })).toHaveAttribute("href", "/dashboard/team");
+  });
+
+  it("hides Team without the permission", () => {
+    setup({ permissions: [], businessType: "NAIL_TECHNICIAN" });
+
+    expect(screen.queryByRole("link", { name: "Team" })).not.toBeInTheDocument();
   });
 });
 

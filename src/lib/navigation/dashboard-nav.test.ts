@@ -45,6 +45,25 @@ describe("filterNavItems — the two predicates together", () => {
   });
 });
 
+describe("filterNavItems — Team (Scheduling S3)", () => {
+  it("shows Team with staff.read, regardless of business type", () => {
+    for (const businessType of ["NAIL_TECHNICIAN", "RESTAURANT", "HOTEL", "TRANSPORT"] as const) {
+      expect(visibleLabels(["staff.read"], businessType)).toContain("Team");
+    }
+  });
+
+  it("shows Team with staff.read even with no business type at all", () => {
+    // Unlike Services, Team carries no vertical gate — a staff roster is
+    // universal, so a legacy tenant with no business type still sees it.
+    expect(visibleLabels(["staff.read"], null)).toContain("Team");
+  });
+
+  it("hides Team without staff.read", () => {
+    expect(visibleLabels([], "NAIL_TECHNICIAN")).not.toContain("Team");
+    expect(visibleLabels(["service.read"], "NAIL_TECHNICIAN")).not.toContain("Team");
+  });
+});
+
 describe("filterNavItems — each predicate independently", () => {
   const icon = () => null;
 

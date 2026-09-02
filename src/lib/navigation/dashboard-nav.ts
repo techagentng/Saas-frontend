@@ -8,7 +8,7 @@ import type { NavItem } from "@/types/navigation";
 import type { Permission } from "@/types/permission";
 import type { BusinessType } from "@/types/tenant";
 
-const TechniciansIcon = Users as ComponentType<SVGProps<SVGSVGElement>>;
+const TeamIcon = Users as ComponentType<SVGProps<SVGSVGElement>>;
 const AvailabilityIcon = Clock as ComponentType<SVGProps<SVGSVGElement>>;
 const BookingsIcon = CalendarDays as ComponentType<SVGProps<SVGSVGElement>>;
 const CustomersIcon = Contact as ComponentType<SVGProps<SVGSVGElement>>;
@@ -16,12 +16,18 @@ const CustomersIcon = Contact as ComponentType<SVGProps<SVGSVGElement>>;
 /**
  * Configuration-driven sidebar nav. Entries are added only as the real route
  * and its confirmed backend permission actually land — no placeholder items are
- * fabricated for features that do not exist yet (Technicians, Availability,
- * Bookings, Customers all remain absent by design).
+ * fabricated for features that do not exist yet (Availability, Bookings,
+ * Customers all remain absent by design).
  *
- * "Services" is the first vertical-gated entry: it exists only for the
- * business types that use the appointment-scheduling booking model, and only
- * for a user the backend has granted `service.read`.
+ * "Services" is vertical-gated: it exists only for the business types that
+ * use the appointment-scheduling booking model, and only for a user the
+ * backend has granted `service.read`.
+ *
+ * "Team" (Scheduling S3) is deliberately NOT vertical-gated. Unlike a service
+ * catalog, a staff roster is universal — a restaurant, a hotel, and a
+ * transport business all have staff — so the schema carries no business-type
+ * coupling and neither does this entry. It is permission-gated on
+ * `staff.read` alone.
  */
 export const dashboardNavItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
@@ -31,6 +37,12 @@ export const dashboardNavItems: NavItem[] = [
     icon: ServicesIcon,
     permission: "service.read",
     businessTypes: SCHEDULING_BUSINESS_TYPES,
+  },
+  {
+    label: "Team",
+    href: "/dashboard/team",
+    icon: TeamIcon,
+    permission: "staff.read",
   },
 ];
 
@@ -43,7 +55,8 @@ export const dashboardNavItems: NavItem[] = [
  * Deliberately kept out of `dashboardNavItems`: that list is the set of
  * routes that actually exist and is what `filterNavItems` gates. Promoting one
  * of these is a two-line move — add `href` + `permission` to the real list,
- * delete the row here — once the feature that backs it ships.
+ * delete the row here — once the feature that backs it ships. "Technicians"
+ * (S4) was the most recent promotion, now `dashboardNavItems`' "Team" entry.
  */
 export type UpcomingNavItem = {
   label: string;
@@ -53,7 +66,6 @@ export type UpcomingNavItem = {
 };
 
 export const upcomingNavItems: UpcomingNavItem[] = [
-  { label: "Technicians", icon: TechniciansIcon, lands: "S4" },
   { label: "Availability", icon: AvailabilityIcon, lands: "S6" },
   { label: "Bookings", icon: BookingsIcon, lands: "S11" },
   { label: "Customers", icon: CustomersIcon, lands: "S11" },

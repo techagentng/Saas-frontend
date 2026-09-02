@@ -26,7 +26,16 @@ export type KnownPermissionCode =
   | "service.read"
   | "service.create"
   | "service.update"
-  | "service.archive";
+  | "service.archive"
+  // Scheduling S3 (migration 000013_seed_staff_permissions). BUSINESS_OWNER
+  // holds all four; STAFF holds `staff.read` only — a technician can see the
+  // roster, but who is employed and what they can perform are owner
+  // decisions. There is deliberately no `staff.assign`: capability
+  // assignment rides on `staff.update`.
+  | "staff.read"
+  | "staff.create"
+  | "staff.update"
+  | "staff.archive";
 
 /**
  * Backend-defined capability identifier. Not restricted to
