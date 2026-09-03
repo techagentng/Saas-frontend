@@ -38,6 +38,10 @@ export type KnownApiErrorCode =
   | "RESOURCE_NOT_FOUND"
   | "USER_NOT_FOUND"
   | "TENANT_NOT_FOUND"
+  // Scheduling S8/S9/S10 public booking surface (internal/errors/codes.go).
+  | "SERVICE_NOT_FOUND"
+  | "STAFF_NOT_FOUND"
+  | "BOOKING_SLOT_UNAVAILABLE"
   | "TENANT_SLUG_TAKEN"
   | "TENANT_SLUG_INVALID"
   | "USER_ALREADY_EXISTS"

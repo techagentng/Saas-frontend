@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" width="1200" height="1600" role="presentation">
+  <defs>
+    <linearGradient id="g2ground" x1="0.1" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#F4EEF0"/>
+      <stop offset="0.4" stop-color="#E4D2D8"/>
+      <stop offset="0.75" stop-color="#B79DAE"/>
+      <stop offset="1" stop-color="#574A5C"/>
+    </linearGradient>
+    <radialGradient id="g2a" cx="0.72" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#EAD7C4" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#EAD7C4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2b" cx="0.24" cy="0.7" r="0.6">
+      <stop offset="0" stop-color="#A98BA6" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#A98BA6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="g2sheen" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#DFC4A0" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#DFC4A0" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#DFC4A0" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="g2soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="70"/>
+    </filter>
+    <filter id="g2grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0"/>
+    </filter>
+    <radialGradient id="g2vig" cx="0.5" cy="0.4" r="0.8">
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2A2230" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="1600" fill="url(#g2ground)"/>
+  <g filter="url(#g2soft)">
+    <ellipse cx="900" cy="330" rx="420" ry="320" fill="url(#g2a)"/>
+    <ellipse cx="280" cy="1120" rx="420" ry="360" fill="url(#g2b)"/>
+    <path d="M -80 620 C 300 820 560 420 940 640 C 1160 770 1180 1040 1320 1000 L 1320 -100 L -80 -100 Z" fill="#C9AEB8" opacity="0.3"/>
+  </g>
+  <g opacity="0.65">
+    <path d="M 140 470 C 480 340 800 560 1080 430" fill="none" stroke="url(#g2sheen)" stroke-width="3"/>
+    <path d="M 160 980 C 500 1120 860 900 1120 1060" fill="none" stroke="url(#g2sheen)" stroke-width="2.5"/>
+  </g>
+  <rect width="1200" height="1600" fill="url(#g2vig)"/>
+  <rect width="1200" height="1600" filter="url(#g2grain)"/>
+</svg>

@@ -39,6 +39,31 @@ export function ServiceSetupCard() {
 
   if (!isEligible) return null;
 
+  // The backend refuses to price a service until the workspace has a currency
+  // (Scheduling S1), so that is the genuine first step. Point at the same
+  // Services page — its currency prompt handles it, and this card updates
+  // itself once the currency is set (both read `currentTenant`).
+  if (!currentTenant.currency) {
+    return (
+      <section className="card p-6">
+        <p className="text-xs font-medium uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          Next step
+        </p>
+        <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
+          Set your business currency
+        </h2>
+        <p className="mt-1 max-w-prose text-sm text-slate-600 dark:text-slate-400">
+          {canCreateServices
+            ? "Choose the currency your prices are in — you'll add services next."
+            : "This workspace doesn't have a currency set yet."}
+        </p>
+        <Link href="/dashboard/services" className="btn-primary mt-4 h-11 px-5 text-sm no-underline">
+          {canCreateServices ? "Set currency" : "View services"}
+        </Link>
+      </section>
+    );
+  }
+
   // Nothing is claimed about the catalog until it is actually known. Showing
   // "Add your services" to a workspace that already has some would be wrong,
   // and guessing while the query is in flight is how that happens.

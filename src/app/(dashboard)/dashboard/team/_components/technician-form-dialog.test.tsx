@@ -4,7 +4,9 @@ import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
+import { resolveVerticalExperience } from "@/lib/vertical/experience";
 import type { StaffProfile } from "@/modules/staff/types";
+import type { BusinessType } from "@/types/tenant";
 
 import { TechnicianFormDialog } from "./technician-form-dialog";
 
@@ -44,6 +46,16 @@ vi.mock("@/providers/auth-provider", () => ({
   useAuth: () => ({ user: authUser }),
 }));
 
+let vertical = resolveVerticalExperience("NAIL_TECHNICIAN");
+
+vi.mock("@/lib/vertical/use-vertical-experience", () => ({
+  useVerticalExperience: () => vertical,
+}));
+
+function setVertical(businessType: BusinessType | null) {
+  vertical = resolveVerticalExperience(businessType);
+}
+
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 
 const ada: StaffProfile = {
@@ -58,6 +70,7 @@ const ada: StaffProfile = {
 };
 
 beforeEach(() => {
+  vertical = resolveVerticalExperience("NAIL_TECHNICIAN");
   authUser = { id: "user-1", email: "owner@example.com" };
   createMutate.mockReset();
   createMutate.mockResolvedValue(ada);
@@ -233,5 +246,41 @@ describe("TechnicianFormDialog — dialog behaviour", () => {
     await user.keyboard("{Escape}");
 
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("TechnicianFormDialog — vertical terminology (V1)", () => {
+  it("titles and labels the create action per vertical", () => {
+    for (const [businessType, addLabel] of [
+      ["NAIL_TECHNICIAN", "Add technician"],
+      ["TRANSPORT", "Add driver"],
+      ["HOTEL", "Add staff member"],
+      ["RESTAURANT", "Add team member"],
+      [null, "Add team member"],
+    ] as const) {
+      setVertical(businessType);
+      const { unmount } = render(
+        <TechnicianFormDialog tenantId={TENANT_ID} onClose={vi.fn()} />
+      );
+
+      expect(screen.getByRole("dialog", { name: addLabel })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: addLabel })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("titles the edit action per vertical without renaming the payload", async () => {
+    setVertical("TRANSPORT");
+    const user = userEvent.setup();
+    render(<TechnicianFormDialog tenantId={TENANT_ID} staff={ada} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("dialog", { name: "Edit driver" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // The UI word changed; the domain payload did not.
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ staffId: ada.id })
+    );
   });
 });

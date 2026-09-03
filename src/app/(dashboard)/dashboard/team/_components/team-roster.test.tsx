@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resolveVerticalExperience } from "@/lib/vertical/experience";
 import type { StaffProfile } from "@/modules/staff/types";
 import type { Permission } from "@/types/permission";
+import type { BusinessType } from "@/types/tenant";
 
 import { TeamRoster } from "./team-roster";
 
@@ -19,6 +21,16 @@ const granted = new Set<Permission>();
 vi.mock("@/providers/permissions-provider", () => ({
   useCan: (permission: Permission) => granted.has(permission),
 }));
+
+let vertical = resolveVerticalExperience("NAIL_TECHNICIAN");
+
+vi.mock("@/lib/vertical/use-vertical-experience", () => ({
+  useVerticalExperience: () => vertical,
+}));
+
+function setVertical(businessType: BusinessType | null) {
+  vertical = resolveVerticalExperience(businessType);
+}
 
 const staffResult = {
   data: [] as StaffProfile[],
@@ -92,6 +104,7 @@ function renderRoster(permissions: Permission[], staff: StaffProfile[] = [ada]) 
 
 beforeEach(() => {
   granted.clear();
+  vertical = resolveVerticalExperience("NAIL_TECHNICIAN");
 });
 
 describe("TeamRoster — read-only access", () => {
@@ -226,5 +239,81 @@ describe("TeamRoster — loading and error states", () => {
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+  });
+});
+
+describe("TeamRoster — vertical terminology (V1)", () => {
+  it("NAIL_TECHNICIAN: technician language and appointment controls", () => {
+    setVertical("NAIL_TECHNICIAN");
+    renderRoster(["staff.read", "staff.create", "staff.update"]);
+
+    expect(screen.getByRole("button", { name: "Add technician" })).toBeInTheDocument();
+    expect(screen.getByText("1 technician")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /working hours for ada okafor/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /manage services for ada okafor/i })
+    ).toBeInTheDocument();
+  });
+
+  it("TRANSPORT: driver language, appointment controls hidden", () => {
+    setVertical("TRANSPORT");
+    renderRoster(["staff.read", "staff.create", "staff.update"]);
+
+    expect(screen.getByRole("button", { name: "Add driver" })).toBeInTheDocument();
+    expect(screen.getByText("1 driver")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /working hours/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /manage services/i })).not.toBeInTheDocument();
+    // Editing a profile still works — a driver roster is a real shared concept.
+    expect(screen.getByRole("button", { name: /edit ada okafor/i })).toBeInTheDocument();
+    expect(screen.queryByText(/technician/i)).not.toBeInTheDocument();
+  });
+
+  it("HOTEL: staff-member language, appointment controls hidden", () => {
+    setVertical("HOTEL");
+    renderRoster(["staff.read", "staff.create", "staff.update"]);
+
+    expect(screen.getByRole("button", { name: "Add staff member" })).toBeInTheDocument();
+    expect(screen.getByText("1 staff member")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /working hours/i })).not.toBeInTheDocument();
+  });
+
+  it("RESTAURANT: team-member language, appointment controls hidden", () => {
+    setVertical("RESTAURANT");
+    renderRoster(["staff.read", "staff.create"], []);
+
+    expect(screen.getByRole("button", { name: "Add team member" })).toBeInTheDocument();
+    expect(screen.getByText("No team members yet")).toBeInTheDocument();
+  });
+
+  it("unknown business type falls back to generic team language and hides appointment controls", () => {
+    setVertical(null);
+    renderRoster(["staff.read", "staff.update"]);
+
+    expect(screen.getByText("1 team member")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /working hours/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /manage services/i })).not.toBeInTheDocument();
+  });
+
+  it("permissions still gate controls within a vertical that supports them", () => {
+    setVertical("NAIL_TECHNICIAN");
+    renderRoster(["staff.read"]);
+
+    // Capability on, but no staff.update → still no manage-services control.
+    expect(screen.queryByRole("button", { name: /manage services/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add technician/i })).not.toBeInTheDocument();
+  });
+
+  it("switching vertical between renders leaves no stale terminology", () => {
+    setVertical("NAIL_TECHNICIAN");
+    const { rerender } = renderRoster(["staff.read", "staff.create"]);
+    expect(screen.getByRole("button", { name: "Add technician" })).toBeInTheDocument();
+
+    setVertical("TRANSPORT");
+    rerender(<TeamRoster tenantId={TENANT_ID} />);
+
+    expect(screen.queryByRole("button", { name: "Add technician" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add driver" })).toBeInTheDocument();
   });
 });

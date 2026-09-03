@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Permission } from "@/types/permission";
@@ -49,7 +49,10 @@ function setup(options: {
 } = {}) {
   granted.clear();
   for (const permission of options.permissions ?? []) granted.add(permission);
-  currentTenant = options.tenant === false ? null : tenantWith(options.businessType ?? "NAIL_TECHNICIAN");
+  currentTenant =
+    options.tenant === false
+      ? null
+      : tenantWith("businessType" in options ? (options.businessType ?? null) : "NAIL_TECHNICIAN");
   pathname = options.path ?? "/dashboard";
   return render(<Sidebar />);
 }
@@ -91,16 +94,66 @@ describe("Sidebar — never renders empty", () => {
 });
 
 describe("Sidebar — Team (Scheduling S3)", () => {
-  it("shows Team for a tenant with staff.read, regardless of business type", () => {
+  it("shows the roster link for a tenant with staff.read, regardless of business type", () => {
     setup({ permissions: ["staff.read"], businessType: "RESTAURANT" });
 
     expect(screen.getByRole("link", { name: "Team" })).toHaveAttribute("href", "/dashboard/team");
   });
 
-  it("hides Team without the permission", () => {
+  it("hides the roster link without the permission", () => {
     setup({ permissions: [], businessType: "NAIL_TECHNICIAN" });
 
+    expect(screen.queryByRole("link", { name: /technicians|team/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("Sidebar — vertical-aware roster label (V1)", () => {
+  it("labels the roster link 'Technicians' for a nail tenant", () => {
+    setup({ permissions: ["staff.read"], businessType: "NAIL_TECHNICIAN" });
+
+    expect(screen.getByRole("link", { name: "Technicians" })).toHaveAttribute(
+      "href",
+      "/dashboard/team"
+    );
     expect(screen.queryByRole("link", { name: "Team" })).not.toBeInTheDocument();
+  });
+
+  it("labels the roster link 'Drivers' for a transport tenant", () => {
+    setup({ permissions: ["staff.read"], businessType: "TRANSPORT" });
+
+    expect(screen.getByRole("link", { name: "Drivers" })).toHaveAttribute(
+      "href",
+      "/dashboard/team"
+    );
+  });
+
+  it("labels the roster link 'Team' for hotel and restaurant tenants", () => {
+    for (const businessType of ["HOTEL", "RESTAURANT"] as const) {
+      setup({ permissions: ["staff.read"], businessType });
+      expect(screen.getByRole("link", { name: "Team" })).toHaveAttribute(
+        "href",
+        "/dashboard/team"
+      );
+      cleanup();
+    }
+  });
+
+  it("labels the roster link 'Team' for an unknown business type (fail-safe)", () => {
+    setup({ permissions: ["staff.read"], businessType: null });
+
+    expect(screen.getByRole("link", { name: "Team" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Technicians" })).not.toBeInTheDocument();
+  });
+
+  it("updates the label when the tenant switches vertical, with no stale label left", () => {
+    const { rerender } = setup({ permissions: ["staff.read"], businessType: "NAIL_TECHNICIAN" });
+    expect(screen.getByRole("link", { name: "Technicians" })).toBeInTheDocument();
+
+    currentTenant = tenantWith("TRANSPORT");
+    rerender(<Sidebar />);
+
+    expect(screen.getByRole("link", { name: "Drivers" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Technicians" })).not.toBeInTheDocument();
   });
 });
 

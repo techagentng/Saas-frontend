@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, fieldInputClass } from "@/components/ui/field";
 import { apiErrorMessage } from "@/lib/api/error-messages";
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { useCreateStaff, useUpdateStaff } from "@/modules/staff/queries";
 import type { StaffProfile } from "@/modules/staff/types";
 import { useAuth } from "@/providers/auth-provider";
@@ -41,6 +42,8 @@ type TechnicianFormDialogProps = {
 export function TechnicianFormDialog({ tenantId, staff, onClose }: TechnicianFormDialogProps) {
   const isEdit = staff !== undefined;
   const { user } = useAuth();
+  const vertical = useVerticalExperience();
+  const memberWord = vertical.team.singular.toLowerCase();
   const createStaff = useCreateStaff(tenantId);
   const updateStaff = useUpdateStaff(tenantId);
   const mutation = isEdit ? updateStaff : createStaff;
@@ -115,11 +118,11 @@ export function TechnicianFormDialog({ tenantId, staff, onClose }: TechnicianFor
 
   return (
     <Dialog
-      title={isEdit ? "Edit technician" : "Add technician"}
+      title={isEdit ? `Edit ${memberWord}` : vertical.team.addLabel}
       description={
         isEdit
           ? "Changes apply to this team member everywhere they appear."
-          : "Add someone who provides services for your business."
+          : "Add someone to your team."
       }
       onClose={onClose}
       footer={
@@ -144,7 +147,7 @@ export function TechnicianFormDialog({ tenantId, staff, onClose }: TechnicianFor
                 : "Adding…"
               : isEdit
                 ? "Save changes"
-                : "Add technician"}
+                : vertical.team.addLabel}
           </button>
         </>
       }

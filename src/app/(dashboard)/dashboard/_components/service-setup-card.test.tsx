@@ -63,11 +63,13 @@ function setup(options: {
   permissions: Permission[];
   services?: Service[];
   isSuccess?: boolean;
+  currency?: string | null;
 }) {
   granted.clear();
   for (const permission of options.permissions) granted.add(permission);
 
   currentTenant = tenantWith(options.businessType);
+  if ("currency" in options) currentTenant.currency = options.currency ?? null;
   servicesResult.data = options.services ?? [];
   servicesResult.isSuccess = options.isSuccess ?? true;
 
@@ -108,6 +110,36 @@ describe("ServiceSetupCard — visibility", () => {
       isSuccess: false,
     });
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("ServiceSetupCard — currency prerequisite", () => {
+  it("points at setting the currency first when the workspace has none", () => {
+    setup({
+      businessType: "NAIL_TECHNICIAN",
+      permissions: ["service.read", "service.create"],
+      currency: null,
+      services: [],
+    });
+
+    expect(screen.getByRole("heading", { name: /set your business currency/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /set currency/i })).toHaveAttribute(
+      "href",
+      "/dashboard/services"
+    );
+    // Not the "add services" prompt while the prerequisite is unmet.
+    expect(screen.queryByRole("heading", { name: "Add your services" })).not.toBeInTheDocument();
+  });
+
+  it("moves on to the add-services prompt once a currency is set", () => {
+    setup({
+      businessType: "NAIL_TECHNICIAN",
+      permissions: ["service.read", "service.create"],
+      currency: "USD",
+      services: [],
+    });
+
+    expect(screen.getByRole("heading", { name: "Add your services" })).toBeInTheDocument();
   });
 });
 

@@ -18,5 +18,13 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Public config the app reads through process.env at module load. Tests
+    // that assert normalization behaviour override these per-case with
+    // vi.stubEnv; everything else just needs them present so a helper does
+    // not throw "not set" during an unrelated render.
+    env: {
+      NEXT_PUBLIC_API_URL: "http://localhost:8090/api",
+      NEXT_PUBLIC_APP_URL: "https://www.iweapps.com",
+    },
   },
 });

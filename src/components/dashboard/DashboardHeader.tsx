@@ -1,6 +1,15 @@
+"use client";
+
 import { CalendarDays, Plus, ExternalLink } from "lucide-react";
 
+import { useBookingPageHref } from "@/lib/tenant/use-booking-page-href";
+
 export function DashboardHeader() {
+  // Same link logic as the "Open booking page" action on the booking-link
+  // card: an absolute URL from NEXT_PUBLIC_APP_URL where configured, otherwise
+  // the in-app `/book/{slug}` path — never derived from window.location.
+  const { href: bookingPageHref } = useBookingPageHref();
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -17,10 +26,22 @@ export function DashboardHeader() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <button className="btn-secondary h-10 px-4 text-sm">
-          <ExternalLink className="h-4 w-4" />
-          View booking page
-        </button>
+        {bookingPageHref ? (
+          <a
+            href={bookingPageHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary h-10 px-4 text-sm no-underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            View booking page
+          </a>
+        ) : (
+          <button type="button" disabled className="btn-secondary h-10 px-4 text-sm opacity-60">
+            <ExternalLink className="h-4 w-4" />
+            View booking page
+          </button>
+        )}
         <button className="btn-primary h-10 px-4 text-sm">
           <Plus className="h-4 w-4" />
           New booking

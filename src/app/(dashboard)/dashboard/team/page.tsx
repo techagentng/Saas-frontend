@@ -1,5 +1,6 @@
 "use client";
 
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { useCan } from "@/providers/permissions-provider";
 import { useTenant } from "@/providers/tenant-provider";
 
@@ -24,6 +25,7 @@ import { TeamRoster } from "./_components/team-roster";
 export default function TeamPage() {
   const { currentTenant, isTenantLoading } = useTenant();
   const canReadStaff = useCan("staff.read");
+  const vertical = useVerticalExperience();
 
   if (isTenantLoading || !currentTenant) {
     return (
@@ -35,7 +37,7 @@ export default function TeamPage() {
 
   if (!canReadStaff) {
     return (
-      <Shell>
+      <Shell heading={vertical.team.plural}>
         <p className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
           You don&apos;t have permission to view the team in this workspace.
         </p>
@@ -44,19 +46,24 @@ export default function TeamPage() {
   }
 
   return (
-    <Shell>
+    <Shell heading={vertical.team.plural}>
       <TeamRoster tenantId={currentTenant.id} />
     </Shell>
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+/**
+ * `heading` is the vertical's team word ("Technicians", "Drivers", or just
+ * "Team") — the same page and components for every business type, only the
+ * label differs. The internal route stays `/dashboard/team`.
+ */
+function Shell({ heading, children }: { heading: string; children: React.ReactNode }) {
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Team</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">{heading}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Manage the people who provide services for your business.
+          Manage the people on your team.
         </p>
       </header>
       {children}

@@ -7,6 +7,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { dashboardNavItems, filterNavItems, upcomingNavItems } from "@/lib/navigation/dashboard-nav";
 import { businessTypeLabel } from "@/lib/tenant/business-type-labels";
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { usePermissions } from "@/providers/permissions-provider";
 import { useTenant } from "@/providers/tenant-provider";
 
@@ -14,11 +15,18 @@ export function Sidebar() {
   const pathname = usePathname();
   const permissions = usePermissions();
   const { currentTenant } = useTenant();
+  const vertical = useVerticalExperience();
 
   const items = filterNavItems(dashboardNavItems, {
     permissions,
     businessType: currentTenant?.business_type,
   });
+
+  // The nav config carries a static fallback label ("Team"); the visible
+  // label for the staff roster follows the tenant's vertical
+  // ("Technicians", "Drivers", or "Team"). The route itself never changes.
+  const labelFor = (href: string, fallback: string) =>
+    href === "/dashboard/team" ? vertical.team.plural : fallback;
 
   // Longest-prefix wins, so /dashboard/services highlights "Services" alone.
   // A plain `startsWith` per item lit up "Dashboard" as well, since every
@@ -62,7 +70,7 @@ export function Sidebar() {
                     }`}
                   >
                     <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {item.label}
+                    {labelFor(item.href, item.label)}
                   </Link>
                 </li>
               );

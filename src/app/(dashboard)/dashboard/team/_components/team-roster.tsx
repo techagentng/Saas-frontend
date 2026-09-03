@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { apiErrorMessage } from "@/lib/api/error-messages";
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { useStaffList } from "@/modules/staff/queries";
 import type { StaffProfile } from "@/modules/staff/types";
 import { useCan } from "@/providers/permissions-provider";
@@ -23,6 +24,7 @@ import { WorkingHoursDialog } from "./working-hours-dialog";
  */
 export function TeamRoster({ tenantId }: { tenantId: string }) {
   const staffQuery = useStaffList(tenantId, "ALL");
+  const vertical = useVerticalExperience();
 
   // Read fresh from PermissionsProvider on every render. Permissions are
   // per-tenant and change when the workspace changes; caching them inside
@@ -54,7 +56,11 @@ export function TeamRoster({ tenantId }: { tenantId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">
           {staffQuery.isSuccess
-            ? `${staff.length} ${staff.length === 1 ? "technician" : "technicians"}`
+            ? `${staff.length} ${
+                staff.length === 1
+                  ? vertical.team.singular.toLowerCase()
+                  : vertical.team.memberPlural
+              }`
             : "Your team"}
         </h2>
         {canCreate && staffQuery.isSuccess && staff.length > 0 && (
@@ -63,7 +69,7 @@ export function TeamRoster({ tenantId }: { tenantId: string }) {
             onClick={() => setIsCreating(true)}
             className="btn-primary h-10 px-4 text-sm"
           >
-            Add technician
+            {vertical.team.addLabel}
           </button>
         )}
       </div>
@@ -96,10 +102,10 @@ export function TeamRoster({ tenantId }: { tenantId: string }) {
         <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-slate-300 bg-white p-8 dark:border-slate-700 dark:bg-slate-900">
           <div>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">
-              No technicians yet
+              No {vertical.team.memberPlural} yet
             </h3>
             <p className="mt-1 max-w-prose text-sm text-slate-600 dark:text-slate-400">
-              Add yourself or another team member so customers can book services with them.
+              Add yourself or another team member to build out your roster.
             </p>
           </div>
           {canCreate ? (
@@ -108,7 +114,7 @@ export function TeamRoster({ tenantId }: { tenantId: string }) {
               onClick={() => setIsCreating(true)}
               className="btn-primary h-11 px-5 text-sm"
             >
-              Add technician
+              {vertical.team.addLabel}
             </button>
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -125,9 +131,21 @@ export function TeamRoster({ tenantId }: { tenantId: string }) {
               key={member.id}
               tenantId={tenantId}
               staff={member}
-              onViewHours={() => setViewingHours(member)}
+              // Working hours (S6) and per-staff service capabilities (S3
+              // staff_services) are appointment-model features. A vertical
+              // that does not use that model gets neither control — the
+              // backend still authorizes independently.
+              onViewHours={
+                vertical.capabilities.staffWorkingHours
+                  ? () => setViewingHours(member)
+                  : undefined
+              }
               onEdit={canUpdate ? () => setEditing(member) : undefined}
-              onManageServices={canUpdate ? () => setManagingServices(member) : undefined}
+              onManageServices={
+                canUpdate && vertical.capabilities.staffServiceCapabilities
+                  ? () => setManagingServices(member)
+                  : undefined
+              }
               // Archiving an already-archived profile is a no-op server-side,
               // so the control is simply absent there rather than offering an
               // action with no effect.

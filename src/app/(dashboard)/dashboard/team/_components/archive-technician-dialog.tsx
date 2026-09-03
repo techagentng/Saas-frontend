@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Dialog } from "@/components/ui/Dialog";
 import { apiErrorMessage } from "@/lib/api/error-messages";
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { useArchiveStaff } from "@/modules/staff/queries";
 import type { StaffProfile } from "@/modules/staff/types";
 
@@ -30,6 +31,7 @@ export function ArchiveTechnicianDialog({
   onClose: () => void;
 }) {
   const archiveStaff = useArchiveStaff(tenantId);
+  const vertical = useVerticalExperience();
   const [error, setError] = useState<string | null>(null);
 
   async function handleArchive() {
@@ -66,7 +68,9 @@ export function ArchiveTechnicianDialog({
             disabled={archiveStaff.isPending}
             className="inline-flex h-10 items-center justify-center rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {archiveStaff.isPending ? "Archiving…" : "Archive technician"}
+            {archiveStaff.isPending
+              ? "Archiving…"
+              : `Archive ${vertical.team.singular.toLowerCase()}`}
           </button>
         </>
       }

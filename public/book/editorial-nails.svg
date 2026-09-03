@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" width="1200" height="1600" role="presentation">
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#F7F1EA"/>
+      <stop offset="0.42" stop-color="#EBD9D3"/>
+      <stop offset="0.72" stop-color="#C9A7AC"/>
+      <stop offset="1" stop-color="#6E5560"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.3" cy="0.28" r="0.6">
+      <stop offset="0" stop-color="#F3D9C9" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#F3D9C9" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.78" cy="0.62" r="0.55">
+      <stop offset="0" stop-color="#B98A93" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#B98A93" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowC" cx="0.55" cy="0.9" r="0.7">
+      <stop offset="0" stop-color="#4B3A44" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#4B3A44" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E7C9A6" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#E7C9A6" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#E7C9A6" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0"/>
+    </filter>
+    <radialGradient id="vignette" cx="0.5" cy="0.42" r="0.75">
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2A2029" stop-opacity="0.32"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="1600" fill="url(#ground)"/>
+
+  <g filter="url(#soft)">
+    <ellipse cx="330" cy="430" rx="360" ry="300" fill="url(#glowA)"/>
+    <ellipse cx="930" cy="1000" rx="380" ry="340" fill="url(#glowB)"/>
+    <ellipse cx="640" cy="1460" rx="520" ry="360" fill="url(#glowC)"/>
+    <path d="M -60 900 C 260 700 520 1180 900 940 C 1120 800 1160 520 1320 560 L 1320 1700 L -60 1700 Z" fill="#8C6B72" opacity="0.28"/>
+  </g>
+
+  <g opacity="0.7">
+    <path d="M 180 250 C 520 120 760 360 1040 250" fill="none" stroke="url(#sheen)" stroke-width="3"/>
+    <path d="M 120 1180 C 460 1320 820 1060 1120 1240" fill="none" stroke="url(#sheen)" stroke-width="2.5"/>
+  </g>
+
+  <rect width="1200" height="1600" fill="url(#vignette)"/>
+  <rect width="1200" height="1600" filter="url(#grain)"/>
+</svg>

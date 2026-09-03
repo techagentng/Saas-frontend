@@ -1,5 +1,6 @@
 "use client";
 
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { useStaffCapabilities } from "@/modules/staff/queries";
 import type { StaffProfile } from "@/modules/staff/types";
 
@@ -47,14 +48,12 @@ export function TechnicianRow({
   tenantId: string;
   staff: StaffProfile;
   /**
-   * Never omitted — reaching the roster at all already requires
-   * `staff.read` (enforced by `TeamPage`), and a schedule has genuine
-   * read-only value. `WorkingHoursDialog` itself gates editing on
-   * `staff.update`, unlike `onEdit`/`onManageServices`/`onArchive` below,
-   * which are pure mutation entry points and are simply absent without the
-   * matching permission.
+   * Present for a `staff.read` user in a vertical whose capability set
+   * includes `staffWorkingHours` (a schedule has genuine read-only value,
+   * so this is not itself `staff.update`-gated). Omitted — control absent —
+   * for a vertical that does not use the appointment working-hours model.
    */
-  onViewHours: () => void;
+  onViewHours?: () => void;
   /** Omitted when the user lacks `staff.update` — the control is then absent, not disabled. */
   onEdit?: () => void;
   /** Omitted when the user lacks `staff.update`. Available regardless of archive state — capability assignment is not a lifecycle action. */
@@ -63,6 +62,7 @@ export function TechnicianRow({
   onArchive?: () => void;
 }) {
   const isArchived = staff.status === "ARCHIVED";
+  const vertical = useVerticalExperience();
 
   return (
     <li
@@ -94,20 +94,24 @@ export function TechnicianRow({
 
         {staff.bio && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{staff.bio}</p>}
 
-        <div className="mt-2 text-sm">
-          <ServiceCount tenantId={tenantId} staffId={staff.id} />
-        </div>
+        {vertical.capabilities.staffServiceCapabilities && (
+          <div className="mt-2 text-sm">
+            <ServiceCount tenantId={tenantId} staffId={staff.id} />
+          </div>
+        )}
       </div>
 
       <div className="flex shrink-0 flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={onViewHours}
-          aria-label={`Working hours for ${staff.display_name}`}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
-        >
-          Working hours
-        </button>
+        {onViewHours && (
+          <button
+            type="button"
+            onClick={onViewHours}
+            aria-label={`Working hours for ${staff.display_name}`}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+          >
+            Working hours
+          </button>
+        )}
         {(onEdit || onManageServices || onArchive) && (
           <>
           {onManageServices && (
