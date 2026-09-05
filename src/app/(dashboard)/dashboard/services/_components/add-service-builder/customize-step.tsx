@@ -6,6 +6,7 @@ import { fieldInputClass } from "@/components/ui/field";
 import { currencyPrefix } from "@/lib/money/currency";
 import { formatDuration, isValidDurationMinutes } from "@/lib/scheduling/duration";
 
+import { ServiceImagePicker } from "./service-image-picker";
 import type { CategoryOption, DraftService } from "./types";
 
 /**
@@ -21,12 +22,14 @@ export function CustomizeStep({
   categoryOptions,
   onChange,
   onRemove,
+  onRetryImageUpload,
 }: {
   currency: string;
   drafts: DraftService[];
   categoryOptions: CategoryOption[];
   onChange: (key: string, patch: Partial<DraftService>) => void;
   onRemove: (key: string) => void;
+  onRetryImageUpload: (key: string) => void;
 }) {
   if (drafts.length === 0) {
     return (
@@ -56,6 +59,7 @@ export function CustomizeStep({
             categoryOptions={categoryOptions}
             onChange={(patch) => onChange(draft.key, patch)}
             onRemove={() => onRemove(draft.key)}
+            onRetryImageUpload={() => onRetryImageUpload(draft.key)}
           />
         ))}
       </ul>
@@ -69,12 +73,14 @@ function DraftCard({
   categoryOptions,
   onChange,
   onRemove,
+  onRetryImageUpload,
 }: {
   draft: DraftService;
   currency: string;
   categoryOptions: CategoryOption[];
   onChange: (patch: Partial<DraftService>) => void;
   onRemove: () => void;
+  onRetryImageUpload: () => void;
 }) {
   const nameId = useId();
   const descriptionId = useId();
@@ -222,6 +228,22 @@ function DraftCard({
         </div>
       </div>
 
+      <ServiceImagePicker
+        images={draft.images}
+        coverKey={draft.coverImageKey}
+        onImagesChange={(images) => onChange({ images })}
+        onCoverChange={(coverImageKey) => onChange({ coverImageKey })}
+        disabled={isBusy}
+      />
+
+      {isCreated && draft.imageUploadStatus !== "idle" && (
+        <ImageUploadStatusBanner
+          status={draft.imageUploadStatus}
+          error={draft.imageUploadError}
+          onRetry={onRetryImageUpload}
+        />
+      )}
+
       {draft.error && (
         <p role="alert" className="text-xs font-medium text-rose-600 dark:text-rose-400">
           {draft.error}
@@ -229,4 +251,38 @@ function DraftCard({
       )}
     </li>
   );
+}
+
+function ImageUploadStatusBanner({
+  status,
+  error,
+  onRetry,
+}: {
+  status: DraftService["imageUploadStatus"];
+  error: string | null;
+  onRetry: () => void;
+}) {
+  if (status === "uploading") {
+    return (
+      <p role="status" aria-live="polite" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+        Uploading images…
+      </p>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div role="alert" className="flex flex-wrap items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-400">
+        <span>
+          Service created, but some images could not be uploaded
+          {error ? `: ${error}` : "."}
+        </span>
+        <button type="button" onClick={onRetry} className="underline underline-offset-2">
+          Retry image upload
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }

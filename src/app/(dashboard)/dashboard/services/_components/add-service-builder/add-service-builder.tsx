@@ -12,6 +12,7 @@ import {
 } from "@/lib/scheduling/duration";
 import { useCreateServiceCategory, useServiceCategories } from "@/modules/service-categories/queries";
 import type { ServiceCategory } from "@/modules/service-categories/types";
+import { listServiceImages, updateServiceImage, uploadServiceImages } from "@/modules/service-images/api";
 import { useServiceSuggestions } from "@/modules/service-suggestions/queries";
 import type { ServiceSuggestion } from "@/modules/service-suggestions/types";
 import { useCreateService } from "@/modules/services/queries";
@@ -45,11 +46,62 @@ function makeDraft(input: {
     categoryKey: input.categoryKey,
     status: "editing",
     error: null,
+    images: [],
+    coverImageKey: null,
+    createdServiceId: null,
+    imageUploadStatus: "idle",
+    imageUploadError: null,
   };
 }
 
 function normalize(name: string): string {
   return name.trim().toLowerCase();
+}
+
+/**
+ * Uploads one draft's locally-picked files to its now-real service, in the
+ * exact visible order — the backend assigns `sort_order` by that array
+ * position and, since this is a brand-new service with no images yet, makes
+ * the FIRST file in the batch the cover automatically. If the owner had
+ * instead chosen a LATER image as cover, that one extra `is_primary` call
+ * corrects it after the fact — cheaper than reordering the upload itself,
+ * and it keeps the stored order identical to what the owner actually arranged.
+ *
+ * Retry-safe by construction: it first asks the server how many images this
+ * service already has and only ever sends the remainder of `draft.images`.
+ * This is what makes "retry image upload" safe to call blindly after a
+ * PARTIAL failure — e.g. the files themselves uploaded fine but the
+ * follow-up cover promotion below is what threw — without a naive retry
+ * re-uploading (and duplicating) files the first attempt already stored.
+ */
+async function uploadDraftImages(tenantId: string, serviceId: string, draft: DraftService): Promise<void> {
+  if (draft.images.length === 0) return;
+
+  const alreadyUploaded = await listServiceImages(tenantId, serviceId);
+  const startIndex = alreadyUploaded.length;
+  const remaining = draft.images.slice(startIndex);
+
+  let uploaded: { id: string }[] = [];
+  if (remaining.length > 0) {
+    const response = await uploadServiceImages(
+      tenantId,
+      serviceId,
+      remaining.map((image) => image.file)
+    );
+    uploaded = response.images;
+  }
+
+  const coverKey = draft.coverImageKey ?? draft.images[0]?.key ?? null;
+  const coverIndex = draft.images.findIndex((image) => image.key === coverKey);
+  // Index 0 needs no promotion: it's already primary, either automatically
+  // (the very first image this service ever received) or from a previous
+  // successful call this retry-safety logic is aware of.
+  if (coverIndex > 0 && coverIndex >= startIndex) {
+    const coverUpload = uploaded[coverIndex - startIndex];
+    if (coverUpload) {
+      await updateServiceImage(tenantId, serviceId, coverUpload.id, { is_primary: true });
+    }
+  }
 }
 
 const STEP_LABELS: Record<BuilderStep, string> = {
@@ -269,28 +321,67 @@ export function AddServiceBuilder({
       setDrafts(working);
 
       const parsedPrice = parseMajorAmountToMinor(draft.price);
+      let createdServiceId: string | null = null;
       try {
-        await createService.mutateAsync({
+        const created = await createService.mutateAsync({
           name: draft.name.trim(),
           description: draft.description.trim() === "" ? null : draft.description.trim(),
           duration_minutes: draft.durationMinutes,
           price_minor: parsedPrice.ok ? parsedPrice.minor : 0,
           category_id: resolvedCategoryIds.get(draft.categoryKey) ?? null,
         });
+        createdServiceId = created.id;
         succeeded += 1;
-        working = working.map((d) => (d.key === draft.key ? { ...d, status: "created", error: null } : d));
+        working = working.map((d) =>
+          d.key === draft.key ? { ...d, status: "created", error: null, createdServiceId: created.id } : d
+        );
       } catch (err) {
         working = working.map((d) =>
           d.key === draft.key ? { ...d, status: "editing", error: apiErrorMessage(err) } : d
         );
       }
       setDrafts(working);
+
+      // The service exists now — a failure from here on must never trigger
+      // another createService call. `createdServiceId` is what makes that
+      // true: it is set once, above, and reused by every retry.
+      if (createdServiceId && draft.images.length > 0) {
+        working = working.map((d) =>
+          d.key === draft.key ? { ...d, imageUploadStatus: "uploading" } : d
+        );
+        setDrafts(working);
+        try {
+          await uploadDraftImages(tenantId, createdServiceId, draft);
+          working = working.map((d) =>
+            d.key === draft.key ? { ...d, imageUploadStatus: "done" } : d
+          );
+        } catch (err) {
+          working = working.map((d) =>
+            d.key === draft.key
+              ? { ...d, imageUploadStatus: "error", imageUploadError: apiErrorMessage(err) }
+              : d
+          );
+        }
+        setDrafts(working);
+      } else if (createdServiceId) {
+        working = working.map((d) =>
+          d.key === draft.key ? { ...d, imageUploadStatus: "done" } : d
+        );
+      }
     }
 
     setIsSubmitting(false);
 
-    if (succeeded === validated.length) {
+    const anyImageUploadFailed = working.some((d) => d.imageUploadStatus === "error");
+    if (succeeded === validated.length && !anyImageUploadFailed) {
       onClose();
+      return;
+    }
+
+    if (succeeded === validated.length && anyImageUploadFailed) {
+      setSubmitError(
+        "Service created, but some images could not be uploaded. Retry the image upload below, or close to keep the service as it is."
+      );
       return;
     }
 
@@ -299,8 +390,34 @@ export function AddServiceBuilder({
     );
   }
 
+  /**
+   * Retries only the image upload for one already-created draft — never
+   * calls `createService` again. `draft.createdServiceId` is the guarantee:
+   * it exists only after that draft's service was actually created, so this
+   * function has no path that could create a duplicate.
+   */
+  async function handleRetryImageUpload(key: string) {
+    const draft = drafts.find((d) => d.key === key);
+    if (!draft || !draft.createdServiceId) return;
+
+    setDrafts((prev) =>
+      prev.map((d) => (d.key === key ? { ...d, imageUploadStatus: "uploading", imageUploadError: null } : d))
+    );
+    try {
+      await uploadDraftImages(tenantId, draft.createdServiceId, draft);
+      setDrafts((prev) => prev.map((d) => (d.key === key ? { ...d, imageUploadStatus: "done" } : d)));
+    } catch (err) {
+      setDrafts((prev) =>
+        prev.map((d) =>
+          d.key === key ? { ...d, imageUploadStatus: "error", imageUploadError: apiErrorMessage(err) } : d
+        )
+      );
+    }
+  }
+
   const isLoading = suggestionsQuery.isPending || categoriesQuery.isPending;
   const isLoadError = suggestionsQuery.isError || categoriesQuery.isError;
+  const remainingDraftCount = drafts.filter((d) => d.status !== "created").length;
 
   return (
     <Dialog title="Add service" description={STEP_LABELS[step]} onClose={onClose} size="xl" footer={
@@ -308,7 +425,7 @@ export function AddServiceBuilder({
         step={step}
         canContinue={selectedSuggestionKeys.size > 0 || stepTwoCustomDrafts.length > 0}
         isSubmitting={isSubmitting}
-        draftCount={drafts.length}
+        draftCount={remainingDraftCount}
         onBack={() => setStep(step === "customize" ? "suggestions" : "category")}
         onContinue={handleContinueToCustomize}
         onSubmit={handleSubmit}
@@ -368,6 +485,7 @@ export function AddServiceBuilder({
             categoryOptions={customizeCategoryOptions}
             onChange={handleDraftChange}
             onRemove={handleDraftRemove}
+            onRetryImageUpload={handleRetryImageUpload}
           />
           {submitError && (
             <p

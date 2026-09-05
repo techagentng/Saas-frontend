@@ -112,6 +112,7 @@ const GEL: PublicServiceCatalog["services"][number] = {
   duration_minutes: 45,
   price_minor: 1999,
   category: null,
+  images: [],
 };
 
 const PEDICURE: PublicServiceCatalog["services"][number] = {
@@ -121,6 +122,7 @@ const PEDICURE: PublicServiceCatalog["services"][number] = {
   duration_minutes: 90,
   price_minor: 500000,
   category: null,
+  images: [],
 };
 
 beforeEach(() => {

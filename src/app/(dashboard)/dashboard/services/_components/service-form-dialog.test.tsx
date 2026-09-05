@@ -21,6 +21,28 @@ vi.mock("@/modules/services/queries", () => ({
   useArchiveService: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+// The edit path now also renders `ServiceImageManager`; neither its
+// permission gate nor its gallery are what these price/duration tests
+// exercise, so both are stubbed to an inert, always-empty state.
+vi.mock("@/providers/permissions-provider", () => ({
+  useCan: () => false,
+}));
+
+vi.mock("@/modules/service-images/queries", () => ({
+  useServiceImages: () => ({
+    data: [],
+    isPending: false,
+    isSuccess: true,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useUploadServiceImages: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateServiceImage: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useReorderServiceImages: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteServiceImage: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 
 const manicure: Service = {

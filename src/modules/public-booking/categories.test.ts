@@ -14,6 +14,7 @@ const svc = (id: string, name: string, extra: Record<string, unknown> = {}): Pub
     duration_minutes: 30,
     price_minor: 1000,
     category: null,
+    images: [],
     ...extra,
   }) as PublicService;
 

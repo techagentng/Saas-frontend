@@ -53,6 +53,24 @@ export type PublicService = {
    * `modules/public-booking/categories.ts` for how this groups the catalogue.
    */
   category: string | null;
+  /**
+   * This service's photos, in display order — `[]` when none were uploaded.
+   * Mirrors `PublicCatalogImage` (`internal/scheduling/handler/public_service_handler.go`)
+   * field for field. See `components/service-image-carousel.tsx` for how the
+   * public page renders 0/1/2+ of these.
+   */
+  images: PublicServiceImage[];
+};
+
+/** One customer-facing service photo. */
+export type PublicServiceImage = {
+  id: string;
+  url: string;
+  /** Null when the business never captioned it — callers fall back to the service's own name. */
+  alt_text: string | null;
+  sort_order: number;
+  /** True for at most one image per service — the cover shown before any gallery interaction. */
+  is_primary: boolean;
 };
 
 /**

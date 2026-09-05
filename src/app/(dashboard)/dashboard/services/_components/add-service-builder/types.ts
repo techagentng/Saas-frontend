@@ -35,6 +35,21 @@ export const UNCATEGORIZED_OPTION: CategoryOption = {
 
 export type DraftStatus = "editing" | "creating" | "created" | "failed";
 
+/**
+ * One locally-selected image, not yet uploaded anywhere. `previewUrl` is a
+ * `URL.createObjectURL` handle owned by `ServiceImagePicker` — created when
+ * the file is picked, revoked on removal or on unmount, and never sent to
+ * the backend (only `file` is, once this draft's service exists).
+ */
+export type DraftImage = {
+  key: string;
+  file: File;
+  previewUrl: string;
+};
+
+/** Per-draft state for the upload that happens right after this draft's service is created. */
+export type ImageUploadStatus = "idle" | "uploading" | "error" | "done";
+
 export type DraftService = {
   /** Stable React key and submission identity — never sent to the backend. */
   key: string;
@@ -47,6 +62,18 @@ export type DraftService = {
   categoryKey: string;
   status: DraftStatus;
   error: string | null;
+  images: DraftImage[];
+  /** Null = "no explicit choice" — the first image is the effective cover. */
+  coverImageKey: string | null;
+  /**
+   * Set once this draft's `createService` call succeeds, so a failed image
+   * upload can be retried against the real service without ever calling
+   * `createService` again — see `add-service-builder.tsx`'s doc comment on
+   * `handleSubmit`.
+   */
+  createdServiceId: string | null;
+  imageUploadStatus: ImageUploadStatus;
+  imageUploadError: string | null;
 };
 
 function normalizeCategoryName(name: string): string {

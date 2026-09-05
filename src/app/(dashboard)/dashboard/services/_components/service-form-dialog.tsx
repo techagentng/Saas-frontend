@@ -22,6 +22,8 @@ import {
 import { useCreateService, useUpdateService } from "@/modules/services/queries";
 import type { Service } from "@/modules/services/types";
 
+import { ServiceImageManager } from "./service-images/service-image-manager";
+
 const MAX_NAME_LENGTH = 255;
 const MAX_DESCRIPTION_LENGTH = 1000;
 
@@ -321,6 +323,12 @@ export function ServiceFormDialog({
             {formError}
           </p>
         )}
+
+        {/* Only an already-created service has an id to attach images to —
+            the Add Service builder's Customize step handles the equivalent
+            section for a service that doesn't exist yet (see
+            add-service-builder/service-image-picker.tsx). */}
+        {isEdit && <ServiceImageManager tenantId={tenantId} serviceId={service.id} />}
       </form>
     </Dialog>
   );

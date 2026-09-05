@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { ServiceImageCarousel } from "@/components/service-image-carousel";
 import { formatDuration } from "@/lib/scheduling/duration";
 import {
   ALL_SERVICES_CATEGORY_ID,
@@ -75,6 +76,7 @@ export function ServiceCatalogueItem({
 }) {
   const duration = formatDuration(service.duration_minutes);
   const price = formatServicePrice(service.price_minor, currency);
+  const cover = service.images.find((image) => image.is_primary) ?? service.images[0];
 
   return (
     <li
@@ -83,7 +85,21 @@ export function ServiceCatalogueItem({
       }`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        <div className="min-w-0 space-y-1.5">
+        {isSelected ? (
+          <ServiceImageCarousel
+            images={service.images}
+            serviceName={service.name}
+            className="aspect-[16/9] w-full sm:aspect-[4/3] sm:w-56 sm:shrink-0"
+          />
+        ) : (
+          <ServiceImageCarousel
+            images={cover ? [cover] : []}
+            serviceName={service.name}
+            className="h-16 w-16 shrink-0"
+          />
+        )}
+
+        <div className="min-w-0 flex-1 space-y-1.5">
           <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
             {service.name}
           </h3>

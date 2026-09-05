@@ -41,6 +41,9 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   // Scheduling SC1 categories
   CATEGORY_NOT_FOUND: "That category no longer exists. Refresh to see the current catalog.",
 
+  // Scheduling service images
+  IMAGE_NOT_FOUND: "That image no longer exists. Refresh to see the current gallery.",
+
   // Request shape
   INVALID_REQUEST: "Something in that request wasn't right. Please check and try again.",
   CONFLICT: "That conflicts with something that already exists.",

@@ -104,6 +104,7 @@ beforeEach(() => {
         duration_minutes: 45,
         price_minor: 800000,
         category: null,
+        images: [],
       },
     ],
   });

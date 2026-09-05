@@ -42,6 +42,8 @@ export type KnownApiErrorCode =
   | "SERVICE_NOT_FOUND"
   // Scheduling SC1 tenant categories (internal/errors/codes.go).
   | "CATEGORY_NOT_FOUND"
+  // Scheduling service images (internal/errors/codes.go).
+  | "IMAGE_NOT_FOUND"
   | "STAFF_NOT_FOUND"
   | "BOOKING_SLOT_UNAVAILABLE"
   | "TENANT_SLUG_TAKEN"

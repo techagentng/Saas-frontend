@@ -37,22 +37,36 @@ function buildUrl(path: string, query?: ApiRequestOptions["query"]): string {
  */
 const NO_RETRY_PATHS = new Set(["/v1/auth/login"]);
 
+/**
+ * `FormData` is passed straight to `fetch` as-is (a multipart upload, e.g.
+ * service images — see `modules/service-images/api.ts`): neither
+ * JSON-stringified nor given an explicit `Content-Type`. The browser must
+ * compute that header itself, because a real multipart body needs a boundary
+ * parameter fetch generates from the `FormData` instance; a hardcoded
+ * `multipart/form-data` would omit it and the server could not parse the body
+ * at all.
+ */
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
 async function performFetch(
   path: string,
   options: ApiRequestOptions,
   accessToken: string | null
 ): Promise<Response> {
   const { method = "GET", body, query, headers, signal } = options;
+  const bodyIsFormData = isFormData(body);
 
   return fetch(buildUrl(path, query), {
     method,
     headers: {
       Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(body !== undefined && !bodyIsFormData ? { "Content-Type": "application/json" } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : bodyIsFormData ? body : JSON.stringify(body),
     // Required for the HttpOnly refresh cookie to travel on /v1/auth/*
     // requests, which are cross-origin (different port) from the app. The
     // cookie's own Path scopes it to the auth routes, so this does not
