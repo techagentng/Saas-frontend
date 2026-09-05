@@ -45,6 +45,14 @@ export type PublicService = {
    * `currency`. Never parsed as a float — see `lib/money/money.ts`.
    */
   price_minor: number;
+  /**
+   * The category's display name, or null for an uncategorised service
+   * (Scheduling SC1). There is deliberately no `category_id` — this is the
+   * anonymous public surface, and the id is an internal detail the owner
+   * dashboard needs but a customer never does. See
+   * `modules/public-booking/categories.ts` for how this groups the catalogue.
+   */
+  category: string | null;
 };
 
 /**

@@ -15,6 +15,13 @@ type DialogProps = {
   children: ReactNode;
   /** Rendered in a right-aligned row at the foot of the dialog. */
   footer?: ReactNode;
+  /**
+   * `"md"` (default) is the original single-column form width. `"xl"` is for
+   * a multi-pane, progressive flow (the Add Service builder) that needs room
+   * for a selection pane beside a summary pane on desktop; it still collapses
+   * to the same full-width sheet as `"md"` on narrow screens.
+   */
+  size?: "md" | "xl";
 };
 
 /**
@@ -30,7 +37,14 @@ type DialogProps = {
  * with an accessible name rather than a click-handling div; and page scroll is
  * locked while it is open.
  */
-export function Dialog({ title, description, onClose, children, footer }: DialogProps) {
+export function Dialog({
+  title,
+  description,
+  onClose,
+  children,
+  footer,
+  size = "md",
+}: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -136,7 +150,9 @@ export function Dialog({ title, description, onClose, children, footer }: Dialog
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-xl outline-none sm:rounded-2xl dark:border-slate-700 dark:bg-slate-900"
+        className={`relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-xl outline-none sm:rounded-2xl dark:border-slate-700 dark:bg-slate-900 ${
+          size === "xl" ? "max-w-4xl" : "max-w-lg"
+        }`}
       >
         <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <h2 id={titleId} className="text-base font-semibold text-slate-900 dark:text-slate-50">

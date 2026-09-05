@@ -82,7 +82,14 @@ const NAIL_TENANT: PublicTenant = {
 const CATALOG: PublicServiceCatalog = {
   currency: "NGN",
   services: [
-    { id: "svc1", name: "Gel Manicure", description: "Long-lasting.", duration_minutes: 45, price_minor: 800000 },
+    {
+      id: "svc1",
+      name: "Gel Manicure",
+      description: "Long-lasting.",
+      duration_minutes: 45,
+      price_minor: 800000,
+      category: null,
+    },
   ],
 };
 

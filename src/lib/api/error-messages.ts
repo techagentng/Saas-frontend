@@ -38,6 +38,9 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   ROLE_ASSIGNMENT_ALREADY_EXISTS: "That role is already assigned.",
   PERMISSION_NOT_FOUND: "That permission no longer exists.",
 
+  // Scheduling SC1 categories
+  CATEGORY_NOT_FOUND: "That category no longer exists. Refresh to see the current catalog.",
+
   // Request shape
   INVALID_REQUEST: "Something in that request wasn't right. Please check and try again.",
   CONFLICT: "That conflicts with something that already exists.",

@@ -3,22 +3,18 @@ import type { PublicService } from "@/modules/public-booking/types";
 /**
  * Grouping the public catalogue by category.
  *
- * The backend `PublicService` DTO has **no category field today** (verified
- * against `internal/scheduling/handler/public_service_handler.go` — it exposes
- * `id, name, description, duration_minutes, price_minor` only).
- *
- * This module is category-READY, not category-inventing:
+ * The backend `PublicService` DTO now carries a real `category: string | null`
+ * (Scheduling SC1, `internal/scheduling/handler/public_service_handler.go`) —
+ * the tenant's own `ServiceCategory.Name`, or null for an uncategorised
+ * service. This module is category-READY, not category-inventing:
  *   - it does NOT infer categories from service names
  *   - it does NOT hardcode production services into categories
- *   - it does NOT fabricate a category field
+ *   - it groups strictly by the field the backend actually sent
  *
- * Today it returns a single **"All Services"** group over the real data. The
- * moment the backend adds a `category` to that DTO (and to `PublicService`
- * here), `hasRealCategories` flips true and this starts producing real groups
- * — `ServiceCategoryTabs` and `ServiceCatalogue` need no change.
- *
- * Required backend follow-up: a tenant-managed `service.category` (see the
- * completion notes).
+ * A catalogue with no real category on any service (a pre-SC1 tenant, or one
+ * that never organized its services) still falls back to a single
+ * **"All Services"** group, so `ServiceCategoryTabs` and `ServiceCatalogue`
+ * render sensibly either way with no branching in either component.
  */
 
 export type ServiceCategory = {
@@ -30,12 +26,8 @@ export type ServiceCategory = {
 
 export const ALL_SERVICES_CATEGORY_ID = "all";
 
-/** The shape `PublicService` will take once the backend adds categories. */
-type MaybeCategorised = PublicService & { category?: string | null };
-
 export function groupServicesByCategory(services: PublicService[]): ServiceCategory[] {
-  const list = services as MaybeCategorised[];
-  const hasRealCategories = list.some(
+  const hasRealCategories = services.some(
     (service) => typeof service.category === "string" && service.category.trim() !== ""
   );
 
@@ -45,7 +37,7 @@ export function groupServicesByCategory(services: PublicService[]): ServiceCateg
 
   const order: string[] = [];
   const grouped = new Map<string, PublicService[]>();
-  for (const service of list) {
+  for (const service of services) {
     const label = service.category?.trim() || "Other";
     if (!grouped.has(label)) {
       grouped.set(label, []);

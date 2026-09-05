@@ -13,6 +13,7 @@ const svc = (id: string, name: string, extra: Record<string, unknown> = {}): Pub
     description: "A meticulous manicure technique that includes cuticle care.",
     duration_minutes: 45,
     price_minor: 1500000,
+    category: null,
     ...extra,
   }) as PublicService;
 

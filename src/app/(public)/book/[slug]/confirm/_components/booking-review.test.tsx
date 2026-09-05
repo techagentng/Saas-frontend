@@ -97,7 +97,14 @@ beforeEach(() => {
   catalogResult = stub<PublicServiceCatalog>({
     currency: "NGN",
     services: [
-      { id: "svc1", name: "Gel Manicure", description: null, duration_minutes: 45, price_minor: 800000 },
+      {
+        id: "svc1",
+        name: "Gel Manicure",
+        description: null,
+        duration_minutes: 45,
+        price_minor: 800000,
+        category: null,
+      },
     ],
   });
   staffResult = stub<PublicServiceStaff>({ service_id: "svc1", staff: [{ id: "st1", name: "Ada Okafor" }] });

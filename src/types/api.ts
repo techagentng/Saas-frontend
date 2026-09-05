@@ -40,6 +40,8 @@ export type KnownApiErrorCode =
   | "TENANT_NOT_FOUND"
   // Scheduling S8/S9/S10 public booking surface (internal/errors/codes.go).
   | "SERVICE_NOT_FOUND"
+  // Scheduling SC1 tenant categories (internal/errors/codes.go).
+  | "CATEGORY_NOT_FOUND"
   | "STAFF_NOT_FOUND"
   | "BOOKING_SLOT_UNAVAILABLE"
   | "TENANT_SLUG_TAKEN"

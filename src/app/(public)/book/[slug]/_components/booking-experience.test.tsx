@@ -111,6 +111,7 @@ const GEL: PublicServiceCatalog["services"][number] = {
   description: "Long-lasting gel finish.",
   duration_minutes: 45,
   price_minor: 1999,
+  category: null,
 };
 
 const PEDICURE: PublicServiceCatalog["services"][number] = {
@@ -119,6 +120,7 @@ const PEDICURE: PublicServiceCatalog["services"][number] = {
   description: null,
   duration_minutes: 90,
   price_minor: 500000,
+  category: null,
 };
 
 beforeEach(() => {

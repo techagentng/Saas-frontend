@@ -53,6 +53,7 @@ const service: Service = {
   description: null,
   duration_minutes: 60,
   price_minor: 1999,
+  category_id: null,
   status: "ACTIVE",
   created_at: "2026-08-27T10:00:00Z",
   updated_at: "2026-08-27T10:00:00Z",

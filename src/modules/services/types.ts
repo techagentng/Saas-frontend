@@ -26,6 +26,13 @@ export type Service = {
   duration_minutes: number;
   /** Integer minor units. Never converted to a float — see `lib/money/money.ts`. */
   price_minor: number;
+  /**
+   * Null for an uncategorised service — the permanent state of a legacy
+   * service created before SC1, and a deliberate choice a tenant can still
+   * make today (categorisation is optional, never required to create a
+   * service). References a `ServiceCategory` id, never a name.
+   */
+  category_id: string | null;
   status: ServiceStatus;
   created_at: string;
   updated_at: string;

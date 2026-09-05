@@ -7,7 +7,15 @@ import {
 import type { PublicService } from "@/modules/public-booking/types";
 
 const svc = (id: string, name: string, extra: Record<string, unknown> = {}): PublicService =>
-  ({ id, name, description: null, duration_minutes: 30, price_minor: 1000, ...extra }) as PublicService;
+  ({
+    id,
+    name,
+    description: null,
+    duration_minutes: 30,
+    price_minor: 1000,
+    category: null,
+    ...extra,
+  }) as PublicService;
 
 describe("groupServicesByCategory — no backend category field (today)", () => {
   it("returns a single 'All Services' group over the real data, in order", () => {

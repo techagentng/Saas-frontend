@@ -46,6 +46,8 @@ export type CreateServiceInput = {
   description: string | null;
   duration_minutes: number;
   price_minor: number;
+  /** Omitted or null files the service as uncategorised. Must name an ACTIVE category belonging to this tenant. */
+  category_id?: string | null;
 };
 
 /** POST /api/v1/tenants/{tenantID}/services — `service.create`. Returns 201 with the created service (ACTIVE). */
@@ -68,6 +70,12 @@ export type UpdateServiceInput = Partial<{
   description: string | null;
   duration_minutes: number;
   price_minor: number;
+  /**
+   * Tri-state, matching the backend's own decode target: omit the key to
+   * leave the assignment unchanged, send `null` to clear it to uncategorised,
+   * or send a category id to (re)assign it.
+   */
+  category_id: string | null;
 }>;
 
 /** PATCH /api/v1/tenants/{tenantID}/services/{serviceID} — `service.update`. */
