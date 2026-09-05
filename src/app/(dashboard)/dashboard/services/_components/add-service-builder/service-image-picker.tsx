@@ -28,12 +28,20 @@ export function ServiceImagePicker({
   onImagesChange,
   onCoverChange,
   disabled = false,
+  serviceName,
 }: {
   images: DraftImage[];
   coverKey: string | null;
   onImagesChange: (next: DraftImage[]) => void;
   onCoverChange: (key: string | null) => void;
   disabled?: boolean;
+  /**
+   * Named on the caller's draft, so when several services are being
+   * customized at once each one's image section reads as "Photos for X"
+   * rather than an identical, unlabelled "Service Images" repeated once per
+   * card — which otherwise looks like the same section duplicated.
+   */
+  serviceName?: string;
 }) {
   const [errors, setErrors] = useState<string[]>([]);
   const effectiveCoverKey = coverKey ?? images[0]?.key ?? null;
@@ -90,7 +98,9 @@ export function ServiceImagePicker({
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Service Images</h4>
+        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          {serviceName ? `Photos for ${serviceName}` : "Service Images"}
+        </h4>
         <p className="text-xs text-slate-500 dark:text-slate-400">
           Add photos that customers will see while booking this service.
         </p>
@@ -115,7 +125,7 @@ export function ServiceImagePicker({
       )}
 
       {images.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <ul className="flex flex-wrap gap-2">
           {images.map((image, index) => {
             const isCover = image.key === effectiveCoverKey;
             return (

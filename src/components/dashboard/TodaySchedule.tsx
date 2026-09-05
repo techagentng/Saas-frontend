@@ -5,7 +5,7 @@ export function TodaySchedule() {
   const { schedule } = mockDashboardData;
 
   return (
-    <div className="card h-full p-5 sm:p-6">
+    <div className="card p-5 sm:p-6">
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">Today&apos;s Schedule</h2>

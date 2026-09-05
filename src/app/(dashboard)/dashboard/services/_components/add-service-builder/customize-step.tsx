@@ -234,6 +234,7 @@ function DraftCard({
         onImagesChange={(images) => onChange({ images })}
         onCoverChange={(coverImageKey) => onChange({ coverImageKey })}
         disabled={isBusy}
+        serviceName={draft.name.trim()}
       />
 
       {isCreated && draft.imageUploadStatus !== "idle" && (

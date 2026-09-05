@@ -41,14 +41,23 @@ export function ImageTile({
 
   return (
     <li
-      className={`group relative aspect-square overflow-hidden rounded-xl border bg-slate-100 dark:bg-slate-900 ${
+      // Fixed pixel dimensions rather than `aspect-square` inside a grid
+      // track: a percentage-height child only resolves against a definite
+      // parent height, and this tile must never depend on that chain
+      // holding up through every context it's dropped into (a CSS Grid
+      // track, a flex-wrap row, nested inside another flex column). A fixed
+      // `h-24 w-24` is unconditionally a real box, so a raw `<img>` with its
+      // own large intrinsic size (a phone photo can be 4000px+ wide) can
+      // never blow this tile — or the layout around it — out to fill the
+      // screen.
+      className={`group relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border bg-slate-100 dark:bg-slate-900 ${
         status === "error"
           ? "border-rose-300 dark:border-rose-900/60"
           : "border-slate-200 dark:border-slate-800"
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- transient dashboard thumbnail, see file doc comment */}
-      <img src={src} alt={alt} className="h-full w-full object-cover" />
+      <img src={src} alt={alt} className="block h-full w-full object-cover" />
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
 

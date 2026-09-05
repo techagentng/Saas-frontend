@@ -106,7 +106,7 @@ export function ServiceImageManager({ tenantId, serviceId }: { tenantId: string;
       {imagesQuery.isSuccess && (
         <>
           {images.length > 0 && (
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            <ul className="flex flex-wrap gap-2">
               {images.map((image, index) => (
                 <ImageTile
                   key={image.id}
