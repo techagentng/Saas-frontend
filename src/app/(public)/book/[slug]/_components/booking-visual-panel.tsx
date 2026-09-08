@@ -24,22 +24,25 @@ export function BookingVisualPanel({
   const image = resolveBookingImage(tenant);
 
   return (
-    <div
-      aria-hidden="true"
-      className={`relative overflow-hidden rounded-3xl bg-[#EBD9D3] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
-    >
-      <Image
-        src={image.src}
-        alt=""
-        fill
-        priority
-        unoptimized
-        sizes="(min-width: 1024px) 40vw, 100vw"
-        className="object-cover"
-      />
-      {/* A whisper-soft scrim so the panel recedes behind the booking column
-          and reads consistently in both themes. */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/5 dark:from-black/30 dark:to-black/5" />
+    // The caller's `className` carries the layout role — including `md:sticky`,
+    // which `next/image`'s `fill` rejects as a parent `position`. So the sticky
+    // box is the OUTER element, and a plain `relative` box directly wraps the
+    // fill image.
+    <div aria-hidden="true" className={className}>
+      <div className="relative h-full w-full overflow-hidden rounded-3xl bg-[#EBD9D3] ring-1 ring-black/5 dark:ring-white/10">
+        <Image
+          src={image.src}
+          alt=""
+          fill
+          priority
+          unoptimized
+          sizes="(min-width: 1024px) 40vw, 100vw"
+          className="object-cover"
+        />
+        {/* A whisper-soft scrim so the panel recedes behind the booking column
+            and reads consistently in both themes. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/5 dark:from-black/30 dark:to-black/5" />
+      </div>
     </div>
   );
 }

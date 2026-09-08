@@ -154,7 +154,7 @@ export function Dialog({
           size === "xl" ? "max-w-4xl" : "max-w-lg"
         }`}
       >
-        <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <div className="shrink-0 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <h2 id={titleId} className="text-base font-semibold text-slate-900 dark:text-slate-50">
             {title}
           </h2>
@@ -168,7 +168,7 @@ export function Dialog({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
         {footer && (
-          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end dark:border-slate-800">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-800">
             {footer}
           </div>
         )}

@@ -106,7 +106,7 @@ export function ImageTile({
       )}
 
       {!isBusy && status !== "error" && (onSetCover || onMoveLeft || onMoveRight) && (
-        <div className="absolute inset-x-1.5 bottom-1.5 flex items-center justify-between gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <div className="absolute inset-x-1.5 bottom-1.5 flex flex-wrap items-center justify-between gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <div className="flex gap-1">
             {onMoveLeft && (
               <button
