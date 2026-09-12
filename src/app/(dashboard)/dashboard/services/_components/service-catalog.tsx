@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { apiErrorMessage } from "@/lib/api/error-messages";
+import { useVerticalExperience } from "@/lib/vertical/use-vertical-experience";
 import { useServiceCategories } from "@/modules/service-categories/queries";
 import type { ServiceCategory } from "@/modules/service-categories/types";
 import { useServices } from "@/modules/services/queries";
@@ -12,6 +13,7 @@ import { useCan } from "@/providers/permissions-provider";
 import { AddServiceBuilder } from "./add-service-builder/add-service-builder";
 import { ArchiveCategoryDialog } from "./archive-category-dialog";
 import { ArchiveServiceDialog } from "./archive-service-dialog";
+import { ManageServiceTechniciansDialog } from "./manage-service-technicians-dialog";
 import { ServiceFormDialog } from "./service-form-dialog";
 import { ServiceRow } from "./service-row";
 
@@ -93,9 +95,17 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
   const canCreate = useCan("service.create");
   const canUpdate = useCan("service.update");
   const canArchive = useCan("service.archive");
+  // SC2: technician assignment rides on staff.update, never service.update —
+  // it changes who can perform the service, not the service definition
+  // itself, the same reasoning the backend route documents. Mirrors
+  // TeamRoster's identical `canUpdate(staff.update) && staffServiceCapabilities`
+  // gate for its own reverse-direction "Manage services" control.
+  const canUpdateStaff = useCan("staff.update");
+  const vertical = useVerticalExperience();
 
   const [isCreating, setIsCreating] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
+  const [managingTechnicians, setManagingTechnicians] = useState<Service | null>(null);
   const [archiving, setArchiving] = useState<Service | null>(null);
   const [archivingCategory, setArchivingCategory] = useState<ServiceCategory | null>(null);
 
@@ -228,6 +238,11 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
                     service={service}
                     currency={currency}
                     onEdit={canUpdate ? () => setEditing(service) : undefined}
+                    onManageTechnicians={
+                      canUpdateStaff && vertical.capabilities.staffServiceCapabilities
+                        ? () => setManagingTechnicians(service)
+                        : undefined
+                    }
                     // Archiving an already-archived service is a no-op
                     // server-side, so the control is simply absent there
                     // rather than offering an action with no effect.
@@ -266,6 +281,15 @@ export function ServiceCatalog({ tenantId, currency }: { tenantId: string; curre
           currency={currency}
           service={editing}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {managingTechnicians && (
+        <ManageServiceTechniciansDialog
+          key={managingTechnicians.id}
+          tenantId={tenantId}
+          service={managingTechnicians}
+          onClose={() => setManagingTechnicians(null)}
         />
       )}
 

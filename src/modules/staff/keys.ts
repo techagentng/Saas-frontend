@@ -19,4 +19,7 @@ export const staffKeys = {
     [...staffKeys.tenant(tenantId), "detail", staffId] as const,
   capabilities: (tenantId: string, staffId: string) =>
     [...staffKeys.tenant(tenantId), "capabilities", staffId] as const,
+  /** SC2: capabilities' mirror, keyed by service id instead of staff id. */
+  serviceStaff: (tenantId: string, serviceId: string) =>
+    [...staffKeys.tenant(tenantId), "service-staff", serviceId] as const,
 };

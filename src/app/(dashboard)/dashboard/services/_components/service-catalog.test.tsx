@@ -22,6 +22,40 @@ vi.mock("@/providers/permissions-provider", () => ({
   useCan: (permission: Permission) => granted.has(permission),
 }));
 
+// SC2: defaults to a vertical with no staffServiceCapabilities, so none of
+// the existing permission/rendering tests below need to know "Manage
+// technicians" exists at all — it stays absent regardless of granted
+// permissions until a test explicitly opts in.
+let staffServiceCapabilitiesEnabled = false;
+vi.mock("@/lib/vertical/use-vertical-experience", () => ({
+  useVerticalExperience: () => ({
+    capabilities: { staffServiceCapabilities: staffServiceCapabilitiesEnabled },
+  }),
+}));
+
+const serviceStaffResult = {
+  data: { staff_ids: [] as string[] },
+  isPending: false,
+  isSuccess: true,
+  isError: false,
+  error: null as unknown,
+  refetch: vi.fn(),
+};
+const staffListForDialogResult = {
+  data: [] as { id: string; display_name: string; status: string }[],
+  isPending: false,
+  isSuccess: true,
+  isError: false,
+  error: null as unknown,
+  refetch: vi.fn(),
+};
+
+vi.mock("@/modules/staff/queries", () => ({
+  useStaffList: () => staffListForDialogResult,
+  useServiceStaff: () => serviceStaffResult,
+  useReplaceServiceStaff: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 const servicesResult = {
   data: [] as Service[],
   isPending: false,
@@ -105,6 +139,9 @@ function renderCatalog(permissions: Permission[], services: Service[] = [manicur
 
 beforeEach(() => {
   granted.clear();
+  staffServiceCapabilitiesEnabled = false;
+  serviceStaffResult.data = { staff_ids: [] };
+  staffListForDialogResult.data = [];
 });
 
 describe("ServiceCatalog — read-only access", () => {
@@ -159,6 +196,33 @@ describe("ServiceCatalog — per-permission controls", () => {
     // Archived services remain editable server-side (the update endpoint has
     // no status check), so the edit control stays.
     expect(screen.getByRole("button", { name: /edit gel manicure/i })).toBeInTheDocument();
+  });
+});
+
+describe("ServiceCatalog — manage technicians (SC2)", () => {
+  it("is absent without staff.update, even in a vertical with staffServiceCapabilities", () => {
+    staffServiceCapabilitiesEnabled = true;
+    renderCatalog(["service.read", "service.update"]);
+
+    expect(screen.queryByRole("button", { name: /manage technicians/i })).not.toBeInTheDocument();
+  });
+
+  it("is absent in a vertical without staffServiceCapabilities, even with staff.update", () => {
+    staffServiceCapabilitiesEnabled = false;
+    renderCatalog(["service.read", "service.update", "staff.update"]);
+
+    expect(screen.queryByRole("button", { name: /manage technicians/i })).not.toBeInTheDocument();
+  });
+
+  it("appears with staff.update in a vertical with staffServiceCapabilities, and opens the assignment dialog", async () => {
+    staffServiceCapabilitiesEnabled = true;
+    const user = userEvent.setup();
+    renderCatalog(["service.read", "staff.update"]);
+
+    const button = screen.getByRole("button", { name: /manage technicians for gel manicure/i });
+    await user.click(button);
+
+    expect(await screen.findByText(/technicians for gel manicure/i)).toBeInTheDocument();
   });
 });
 

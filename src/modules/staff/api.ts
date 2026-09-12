@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import type {
+  ServiceStaff,
   StaffCapabilities,
   StaffListFilter,
   StaffProfile,
@@ -131,6 +132,41 @@ export function replaceStaffCapabilities(
   return apiClient.put<StaffCapabilities>(
     `/v1/tenants/${tenantId}/staff/${staffId}/services`,
     { service_ids: serviceIds },
+    { signal }
+  );
+}
+
+/**
+ * GET /api/v1/tenants/{tenantID}/services/{serviceID}/staff (SC2) —
+ * `staff.read`. `listStaffCapabilities` run the other way round: the
+ * technicians currently assigned to one service.
+ */
+export function listServiceStaff(
+  tenantId: string,
+  serviceId: string,
+  signal?: AbortSignal
+): Promise<ServiceStaff> {
+  return apiClient.get<ServiceStaff>(
+    `/v1/tenants/${tenantId}/services/${serviceId}/staff`,
+    { signal }
+  );
+}
+
+/**
+ * PUT /api/v1/tenants/{tenantID}/services/{serviceID}/staff (SC2) —
+ * `staff.update`. `replaceStaffCapabilities` run the other way round: the
+ * body is the complete set of technicians for this service, not a delta. An
+ * empty array is a legitimate "no technicians assigned yet" state.
+ */
+export function replaceServiceStaff(
+  tenantId: string,
+  serviceId: string,
+  staffIds: string[],
+  signal?: AbortSignal
+): Promise<ServiceStaff> {
+  return apiClient.put<ServiceStaff>(
+    `/v1/tenants/${tenantId}/services/${serviceId}/staff`,
+    { staff_ids: staffIds },
     { signal }
   );
 }

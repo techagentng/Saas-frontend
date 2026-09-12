@@ -52,6 +52,35 @@ vi.mock("@/modules/service-images/api", () => ({
   listServiceImages: (...args: unknown[]) => listServiceImagesMock(...args),
 }));
 
+// SC2: defaults to a vertical with NO technicians step, so every existing
+// test below keeps exercising the exact pre-SC2 3-step flow ("Create N
+// services" reachable directly from customize) unless a test explicitly
+// overrides this to true. This is what `hasTechnicianStep` reads in
+// add-service-builder.tsx.
+let staffServiceCapabilitiesEnabled = false;
+vi.mock("@/lib/vertical/use-vertical-experience", () => ({
+  useVerticalExperience: () => ({
+    capabilities: { staffServiceCapabilities: staffServiceCapabilitiesEnabled },
+  }),
+}));
+
+const staffListResult: { data: unknown[]; isPending: boolean; isError: boolean; error: unknown; refetch: ReturnType<typeof vi.fn> } = {
+  data: [],
+  isPending: false,
+  isError: false,
+  error: null,
+  refetch: vi.fn(),
+};
+const replaceServiceStaffMock = vi.fn();
+
+vi.mock("@/modules/staff/queries", () => ({
+  useStaffList: () => staffListResult,
+}));
+
+vi.mock("@/modules/staff/api", () => ({
+  replaceServiceStaff: (...args: unknown[]) => replaceServiceStaffMock(...args),
+}));
+
 function makeFile(name: string, type = "image/jpeg"): File {
   return new File([new Uint8Array(1024)], name, { type });
 }
@@ -101,6 +130,13 @@ beforeEach(() => {
   });
   updateServiceImageMock.mockReset().mockResolvedValue(undefined);
   listServiceImagesMock.mockReset().mockResolvedValue([]);
+
+  staffServiceCapabilitiesEnabled = false;
+  staffListResult.data = [];
+  staffListResult.isPending = false;
+  staffListResult.isError = false;
+  staffListResult.error = null;
+  replaceServiceStaffMock.mockReset().mockResolvedValue({ staff_ids: [] });
 });
 
 describe("AddServiceBuilder — service creation followed by image upload", () => {
@@ -204,6 +240,127 @@ describe("AddServiceBuilder — image upload fails after a successful service cr
     // Still exactly one createService call, ever — the retry only re-ran the upload.
     expect(createServiceMutate).toHaveBeenCalledTimes(1);
     expect(uploadServiceImagesMock).toHaveBeenLastCalledWith(TENANT_ID, "new-service-id", expect.any(Array));
+  });
+});
+
+const TECHNICIAN_ADA = {
+  id: "staff-ada",
+  user_id: null,
+  display_name: "Ada",
+  bio: null,
+  is_bookable: true,
+  status: "ACTIVE" as const,
+  created_at: "2026-09-05T10:00:00Z",
+  updated_at: "2026-09-05T10:00:00Z",
+};
+const TECHNICIAN_BOLA = {
+  id: "staff-bola",
+  user_id: null,
+  display_name: "Bola",
+  bio: null,
+  is_bookable: true,
+  status: "ACTIVE" as const,
+  created_at: "2026-09-05T10:00:00Z",
+  updated_at: "2026-09-05T10:00:00Z",
+};
+
+async function reachTechniciansStep(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /^natural nails/i }));
+  await user.click(screen.getByRole("checkbox", { name: /russian manicure/i }));
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await user.type(screen.getByLabelText("Price"), "5000");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+}
+
+describe("AddServiceBuilder — assign technicians step (SC2, nail-technician vertical only)", () => {
+  beforeEach(() => {
+    staffServiceCapabilitiesEnabled = true;
+    staffListResult.data = [TECHNICIAN_ADA, TECHNICIAN_BOLA];
+  });
+
+  it("does not appear for a vertical without staffServiceCapabilities", async () => {
+    staffServiceCapabilitiesEnabled = false;
+    const user = userEvent.setup();
+    render(<AddServiceBuilder tenantId={TENANT_ID} currency="NGN" onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /^natural nails/i }));
+    await user.click(screen.getByRole("checkbox", { name: /russian manicure/i }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText("Price"), "5000");
+
+    // Straight to "Create N services" — no "Continue"/technicians step at all.
+    expect(screen.getByRole("button", { name: /create 1 service/i })).toBeInTheDocument();
+    expect(screen.queryByText(/assign technicians/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the existing roster and lets the owner check technicians before creating", async () => {
+    const user = userEvent.setup();
+    render(<AddServiceBuilder tenantId={TENANT_ID} currency="NGN" onClose={vi.fn()} />);
+
+    await reachTechniciansStep(user);
+
+    expect(screen.getByRole("heading", { name: "Assign technicians" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /ada/i })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /bola/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: /ada/i }));
+    await user.click(screen.getByRole("button", { name: /create 1 service/i }));
+
+    await vi.waitFor(() => expect(replaceServiceStaffMock).toHaveBeenCalledTimes(1));
+    expect(replaceServiceStaffMock).toHaveBeenCalledWith(TENANT_ID, "new-service-id", ["staff-ada"]);
+  });
+
+  it("shows an empty-roster message and still creates the service on Skip for now", async () => {
+    staffListResult.data = [];
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AddServiceBuilder tenantId={TENANT_ID} currency="NGN" onClose={onClose} />);
+
+    await reachTechniciansStep(user);
+
+    expect(screen.getByText(/haven.t added any technicians yet/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /skip for now/i }));
+
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(replaceServiceStaffMock).not.toHaveBeenCalled();
+  });
+
+  it("Skip for now discards any checked technicians rather than assigning them", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AddServiceBuilder tenantId={TENANT_ID} currency="NGN" onClose={onClose} />);
+
+    await reachTechniciansStep(user);
+    await user.click(screen.getByRole("checkbox", { name: /ada/i }));
+    await user.click(screen.getByRole("button", { name: /skip for now/i }));
+
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(replaceServiceStaffMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a technician assignment failure without losing the created service, and offers retry", async () => {
+    replaceServiceStaffMock.mockRejectedValueOnce(new Error("network error"));
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AddServiceBuilder tenantId={TENANT_ID} currency="NGN" onClose={onClose} />);
+
+    await reachTechniciansStep(user);
+    await user.click(screen.getByRole("checkbox", { name: /ada/i }));
+    await user.click(screen.getByRole("button", { name: /create 1 service/i }));
+
+    expect(
+      (await screen.findAllByText(/technician assignment failed/i)).length
+    ).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /retry assignment/i })).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(createServiceMutate).toHaveBeenCalledTimes(1);
+
+    replaceServiceStaffMock.mockResolvedValueOnce({ staff_ids: ["staff-ada"] });
+    await user.click(screen.getByRole("button", { name: /retry assignment/i }));
+
+    await vi.waitFor(() => expect(replaceServiceStaffMock).toHaveBeenCalledTimes(2));
+    // Still exactly one createService call, ever — the retry only re-ran the assignment.
+    expect(createServiceMutate).toHaveBeenCalledTimes(1);
   });
 });
 

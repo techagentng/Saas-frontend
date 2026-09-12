@@ -50,3 +50,12 @@ export type StaffListFilter = "ACTIVE" | "ARCHIVED" | "ALL";
 export type StaffCapabilities = {
   service_ids: string[];
 };
+
+/**
+ * GET/PUT .../services/{serviceID}/staff (SC2) — StaffCapabilities' mirror
+ * from the service side: staff ids only. Resolving them to full staff
+ * profiles is the roster's job (`useStaffList`), not this endpoint's.
+ */
+export type ServiceStaff = {
+  staff_ids: string[];
+};

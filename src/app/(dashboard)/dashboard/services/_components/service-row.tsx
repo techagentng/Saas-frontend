@@ -19,12 +19,21 @@ export function ServiceRow({
   service,
   currency,
   onEdit,
+  onManageTechnicians,
   onArchive,
 }: {
   service: Service;
   currency: string;
   /** Omitted when the user lacks `service.update` — the control is then absent, not disabled. */
   onEdit?: () => void;
+  /**
+   * SC2: omitted when the user lacks `staff.update` (capability assignment
+   * rides on that permission, never `service.update` — see the backend's own
+   * route comment), or in a vertical with no staffServiceCapabilities at
+   * all. Available regardless of archive state — assignment is not a
+   * lifecycle action, mirroring `TechnicianRow`'s own `onManageServices`.
+   */
+  onManageTechnicians?: () => void;
   /** Omitted when the user lacks `service.archive`, or when the service is already archived. */
   onArchive?: () => void;
 }) {
@@ -74,8 +83,18 @@ export function ServiceRow({
         </dl>
       </div>
 
-      {(onEdit || onArchive) && (
+      {(onEdit || onManageTechnicians || onArchive) && (
         <div className="flex shrink-0 gap-2">
+          {onManageTechnicians && (
+            <button
+              type="button"
+              onClick={onManageTechnicians}
+              aria-label={`Manage technicians for ${service.name}`}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+            >
+              Manage technicians
+            </button>
+          )}
           {onEdit && (
             <button
               type="button"

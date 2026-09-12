@@ -1,7 +1,7 @@
 import type { ServiceCategory } from "@/modules/service-categories/types";
 import type { ServiceSuggestion } from "@/modules/service-suggestions/types";
 
-export type BuilderStep = "category" | "suggestions" | "customize";
+export type BuilderStep = "category" | "suggestions" | "customize" | "technicians";
 
 /**
  * One selectable tile in Step 1. Derived purely from live data — never a
@@ -50,6 +50,14 @@ export type DraftImage = {
 /** Per-draft state for the upload that happens right after this draft's service is created. */
 export type ImageUploadStatus = "idle" | "uploading" | "error" | "done";
 
+/**
+ * Per-draft state for the technician assignment that happens right after
+ * this draft's service is created (SC2) — mirrors ImageUploadStatus exactly,
+ * including "done" covering the legitimate zero-technicians case (skipped,
+ * or a vertical with no staffServiceCapabilities at all).
+ */
+export type TechnicianAssignStatus = "idle" | "assigning" | "error" | "done";
+
 export type DraftService = {
   /** Stable React key and submission identity — never sent to the backend. */
   key: string;
@@ -73,6 +81,10 @@ export type DraftService = {
   createdServiceId: string | null;
   imageUploadStatus: ImageUploadStatus;
   imageUploadError: string | null;
+  /** Technician ids chosen on the Assign Technicians step, before this draft's service exists. */
+  technicianIds: string[];
+  technicianAssignStatus: TechnicianAssignStatus;
+  technicianAssignError: string | null;
 };
 
 function normalizeCategoryName(name: string): string {

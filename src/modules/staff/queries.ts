@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   archiveStaff,
   createStaff,
+  listServiceStaff,
   listStaff,
   listStaffCapabilities,
+  replaceServiceStaff,
   replaceStaffCapabilities,
   updateStaff,
 } from "@/modules/staff/api";
@@ -102,6 +104,41 @@ export function useReplaceStaffCapabilities(tenantId: string, staffId: string) {
     mutationFn: (serviceIds: string[]) => replaceStaffCapabilities(tenantId, staffId, serviceIds),
     onSuccess: (result) => {
       queryClient.setQueryData(staffKeys.capabilities(tenantId, staffId), result);
+    },
+  });
+}
+
+/**
+ * SC2: the staff ids currently assigned to one service — `useStaffCapabilities`
+ * run the other way round. Disabled until a real service id exists, which is
+ * what makes it safe to call unconditionally from the Add Service builder's
+ * technician step before any draft has been created.
+ */
+export function useServiceStaff(tenantId: string | undefined, serviceId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+
+  return useQuery({
+    queryKey: staffKeys.serviceStaff(tenantId ?? "", serviceId ?? ""),
+    queryFn: ({ signal }) => listServiceStaff(tenantId as string, serviceId as string, signal),
+    enabled: isAuthenticated && Boolean(tenantId) && Boolean(serviceId),
+  });
+}
+
+/**
+ * SC2: replaces one service's complete technician set —
+ * `useReplaceStaffCapabilities` run the other way round. Invalidates only
+ * this service's technician query, the same narrow-invalidation reasoning:
+ * assigning a technician never changes the service's own fields or the
+ * roster's own fields, so neither the catalog nor the roster list needs to
+ * refetch.
+ */
+export function useReplaceServiceStaff(tenantId: string, serviceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (staffIds: string[]) => replaceServiceStaff(tenantId, serviceId, staffIds),
+    onSuccess: (result) => {
+      queryClient.setQueryData(staffKeys.serviceStaff(tenantId, serviceId), result);
     },
   });
 }
