@@ -1,4 +1,4 @@
-import type { PublicTenant } from "@/modules/public-booking/types";
+import type { PublicService, PublicServiceImage, PublicTenant } from "@/modules/public-booking/types";
 
 /**
  * The single seam for the public booking page's editorial imagery.
@@ -11,6 +11,11 @@ import type { PublicTenant } from "@/modules/public-booking/types";
  * When a tenant gallery/branding endpoint lands, this is the ONE place to
  * change: `resolveBookingImage` picks the tenant's own image and falls back
  * to a default. No component that renders the panel needs to change.
+ *
+ * A real customer-uploaded service photo (see `resolveServicePreviewImage`
+ * below) always takes priority over this default — that's a
+ * `BookingVisualPanelImage`, not a `BookingImage`, since it carries genuine
+ * alt text instead of being purely decorative.
  */
 export type BookingImage = {
   /** Path under `/public`. Served as-is (see `BookingVisualPanel` — `unoptimized`). */
@@ -18,6 +23,12 @@ export type BookingImage = {
   /** Intrinsic dimensions, for `next/image` aspect-ratio math. */
   width: number;
   height: number;
+};
+
+/** A real photo shown in the visual panel — content, not decoration, so it carries real alt text. */
+export type BookingVisualPanelImage = {
+  src: string;
+  alt: string;
 };
 
 /** Product-owned defaults. A small set so the panel isn't identical everywhere. */
@@ -44,4 +55,21 @@ export function resolveBookingImage(tenant: Pick<PublicTenant, "slug"> | null | 
   // return `tenant.gallery[0]` here and fall through to the default below.
   const seed = tenant?.slug ?? "";
   return DEFAULT_BOOKING_IMAGES[pickIndex(seed, DEFAULT_BOOKING_IMAGES.length)];
+}
+
+/** The photo a service leads with — its primary image, or the first uploaded when none is marked primary. */
+export function serviceCoverImage(service: Pick<PublicService, "images">): PublicServiceImage | undefined {
+  return service.images.find((image) => image.is_primary) ?? service.images[0];
+}
+
+/**
+ * A real, customer-uploaded photo for the visual panel — `null` when this
+ * service has no images, so the caller falls back to `resolveBookingImage`.
+ */
+export function resolveServicePreviewImage(
+  service: Pick<PublicService, "name" | "images">
+): BookingVisualPanelImage | null {
+  const cover = serviceCoverImage(service);
+  if (!cover) return null;
+  return { src: cover.url, alt: cover.alt_text?.trim() || `${service.name} service` };
 }

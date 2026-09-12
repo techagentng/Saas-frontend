@@ -11,6 +11,7 @@ import {
   usePublicTenant,
 } from "@/modules/public-booking/queries";
 
+import { resolveServicePreviewImage } from "../../_components/booking-images";
 import { BookingConfirmation } from "../../_components/booking-confirmation";
 import { BookingProgress } from "../../_components/booking-progress";
 import { BookingSummary } from "../../_components/booking-summary";
@@ -93,10 +94,12 @@ export function BookingReview({ slug }: { slug: string }) {
     );
   }
 
+  const previewImage = resolveServicePreviewImage(service);
+
   // Only after the backend has persisted the booking.
   if (mutation.isSuccess) {
     return (
-      <PublicBookingLayout tenant={tenant}>
+      <PublicBookingLayout tenant={tenant} previewImage={previewImage}>
         <BookingConfirmation
           booking={mutation.data.booking}
           businessName={tenant.name}
@@ -114,7 +117,7 @@ export function BookingReview({ slug }: { slug: string }) {
     mutation.isError && isApiError(mutation.error) && mutation.error.code === "BOOKING_SLOT_UNAVAILABLE";
   if (isConflict) {
     return (
-      <PublicBookingLayout tenant={tenant}>
+      <PublicBookingLayout tenant={tenant} previewImage={previewImage}>
         <p role="status" className="text-sm text-slate-600 dark:text-slate-400">
           That time is no longer available. Taking you back to choose another…
         </p>
@@ -149,7 +152,7 @@ export function BookingReview({ slug }: { slug: string }) {
   }).toString()}`;
 
   return (
-    <PublicBookingLayout tenant={tenant}>
+    <PublicBookingLayout tenant={tenant} previewImage={previewImage}>
       <div className="space-y-8">
         <header className="space-y-4">
           <BookingProgress current="review" />
