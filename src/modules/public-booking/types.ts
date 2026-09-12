@@ -146,6 +146,12 @@ export type CreatePublicBookingInput = {
  * tenant id, no customer PII echoed back, no timestamps, no internal
  * scheduling maths. `reference` is a display-only human tag ("NB-1A2B3C4D");
  * `id` is the canonical UUID.
+ *
+ * `receipt_token` (Scheduling S12) is the customer's one and only chance to
+ * receive this secret — no other endpoint ever returns it again. It is the
+ * sole access credential for `downloadBookingReceipt`; `reference` alone is
+ * not a safe public lookup key (see the backend's own migration 000021 doc
+ * comment).
  */
 export type PublicBookingConfirmation = {
   id: string;
@@ -157,6 +163,7 @@ export type PublicBookingConfirmation = {
   start: string;
   end: string;
   timezone: string;
+  receipt_token: string;
 };
 
 /** `POST .../bookings` `201` envelope — the booking under a `booking` key. */

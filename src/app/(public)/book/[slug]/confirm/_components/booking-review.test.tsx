@@ -57,12 +57,22 @@ let mutation: MutationStub;
 /** Payload + options captured from the last `mutation.mutate(...)` call. */
 let lastMutateCall: { input: CreatePublicBookingInput; options?: { onError?: (e: unknown) => void } } | null;
 
+type ReceiptMutationStub = {
+  mutate: ReturnType<typeof vi.fn>;
+  isPending: boolean;
+  isError: boolean;
+};
+let receiptMutation: ReceiptMutationStub;
+
 vi.mock("@/modules/public-booking/queries", () => ({
   usePublicTenant: () => tenantResult,
   usePublicServiceCatalog: () => catalogResult,
   usePublicServiceStaff: () => staffResult,
   useCreatePublicBooking: () => mutation,
+  useDownloadBookingReceipt: () => receiptMutation,
 }));
+
+vi.mock("@/lib/media/download-file", () => ({ downloadBlob: vi.fn() }));
 
 const fetchSpy = vi.spyOn(globalThis, "fetch");
 
@@ -77,6 +87,7 @@ const BOOKING: CreatePublicBookingResponse = {
     start: "09:00",
     end: "09:45",
     timezone: "Africa/Lagos",
+    receipt_token: "rtok_abc123",
   },
 };
 
@@ -119,6 +130,11 @@ beforeEach(() => {
     data: undefined,
     error: null,
   };
+  receiptMutation = {
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+  };
 });
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, over: Partial<Record<"name" | "phone" | "email", string>> = {}) {
@@ -147,6 +163,11 @@ describe("BookingReview — review + form", () => {
     render(<BookingReview slug="glamour-nails" />);
     expect(screen.queryByText(/booking confirmed/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/reference/i)).not.toBeInTheDocument();
+  });
+
+  it("never shows the receipt download action before confirmation (other steps unaffected)", () => {
+    render(<BookingReview slug="glamour-nails" />);
+    expect(screen.queryByRole("button", { name: /download booking receipt/i })).not.toBeInTheDocument();
   });
 
   it("offers a Change time link that preserves service/staff/date", () => {
@@ -357,5 +378,25 @@ describe("BookingReview — confirmation", () => {
 
     expect(screen.getByRole("heading", { name: /booking confirmed/i })).toBeInTheDocument();
     expect(screen.queryByText(/₦/)).not.toBeInTheDocument();
+  });
+
+  it("shows the Download receipt action once the booking is confirmed", () => {
+    render(<BookingReview slug="glamour-nails" />);
+    expect(screen.getByRole("button", { name: /download booking receipt/i })).toBeInTheDocument();
+  });
+
+  it("clicking Download receipt requests the receipt exactly once and never creates another booking", async () => {
+    const user = userEvent.setup();
+    render(<BookingReview slug="glamour-nails" />);
+
+    await user.click(screen.getByRole("button", { name: /download booking receipt/i }));
+
+    expect(receiptMutation.mutate).toHaveBeenCalledTimes(1);
+    expect(receiptMutation.mutate).toHaveBeenCalledWith(
+      { reference: "NB-1A2B3C4D", receiptToken: "rtok_abc123" },
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    );
+    // The booking-creation mutation from earlier in this flow must never fire again.
+    expect(mutation.mutate).not.toHaveBeenCalled();
   });
 });

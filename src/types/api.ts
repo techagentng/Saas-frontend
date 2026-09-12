@@ -46,6 +46,10 @@ export type KnownApiErrorCode =
   | "IMAGE_NOT_FOUND"
   | "STAFF_NOT_FOUND"
   | "BOOKING_SLOT_UNAVAILABLE"
+  // Scheduling S12 public booking receipt (internal/errors/codes.go) — a
+  // wrong token, a cross-tenant token, and a reference/token mismatch all
+  // collapse to this one code, deliberately indistinguishable.
+  | "BOOKING_NOT_FOUND"
   | "TENANT_SLUG_TAKEN"
   | "TENANT_SLUG_INVALID"
   | "USER_ALREADY_EXISTS"

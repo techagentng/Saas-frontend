@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isApiError } from "@/lib/api/errors";
 import {
   createPublicBooking,
+  downloadBookingReceipt,
   getPublicAvailability,
   getPublicServiceCatalog,
   getPublicServiceStaff,
@@ -108,5 +109,27 @@ export function useCreatePublicBooking(slug: string) {
         invalidateAvailability();
       }
     },
+  });
+}
+
+/**
+ * Downloads one already-persisted booking's PDF receipt (Scheduling S12) on
+ * demand — a mutation, not a query: this is a one-shot click action, never
+ * cached, and re-clicking is not "refetching stale data" the way a query
+ * would model it.
+ *
+ * `retry: false` for the same reason `useCreatePublicBooking` disables it: a
+ * failed receipt request already has its final answer (bad/expired token,
+ * tenant no longer public, PDF rendering failure) and silently resending it
+ * would just repeat that answer. This mutation never touches booking
+ * creation in any way — it only ever reads an existing booking's receipt, so
+ * calling it again (via the caller's own Retry) can never create another
+ * booking.
+ */
+export function useDownloadBookingReceipt(slug: string) {
+  return useMutation({
+    mutationFn: ({ reference, receiptToken }: { reference: string; receiptToken: string }) =>
+      downloadBookingReceipt(slug, reference, receiptToken),
+    retry: false,
   });
 }

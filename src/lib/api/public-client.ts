@@ -68,3 +68,46 @@ export async function publicApiPost<T>(
 
   return (await response.json()) as T;
 }
+
+export type PublicBlobResponse = {
+  blob: Blob;
+  /** The server's chosen filename from `Content-Disposition`, or `null` if the header is absent/unparseable. */
+  filename: string | null;
+};
+
+/**
+ * Anonymous GET against the public API surface for a binary response (the
+ * Scheduling S12 PDF receipt) rather than JSON. Same no-token / no-retry /
+ * same-`ApiError` contract as `publicApiGet` — a non-2xx response is still
+ * normalized via `toApiError`, which reads a JSON body exactly like every
+ * other error in this app (the backend's `writeSchedulingError` returns the
+ * same envelope on this route as on every other public one). Only a
+ * successful response is read as a `Blob` instead of JSON.
+ */
+export async function publicApiGetBlob(
+  path: string,
+  query?: Record<string, string | undefined>,
+  signal?: AbortSignal
+): Promise<PublicBlobResponse> {
+  const url = new URL(`${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`);
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== "") url.searchParams.set(key, value);
+    }
+  }
+
+  const response = await fetch(url.toString(), { method: "GET", signal });
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  const blob = await response.blob();
+  return { blob, filename: filenameFromContentDisposition(response.headers.get("content-disposition")) };
+}
+
+function filenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename="?([^";]+)"?/i.exec(header);
+  return match ? match[1] : null;
+}

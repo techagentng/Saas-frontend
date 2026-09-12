@@ -1,4 +1,4 @@
-import { publicApiGet, publicApiPost } from "@/lib/api/public-client";
+import { publicApiGet, publicApiGetBlob, publicApiPost } from "@/lib/api/public-client";
 import type {
   CreatePublicBookingInput,
   CreatePublicBookingResponse,
@@ -95,4 +95,37 @@ export function createPublicBooking(
     input,
     signal
   );
+}
+
+export type BookingReceiptDownload = {
+  blob: Blob;
+  /** Never null: falls back to `booking-{reference}.pdf` when `Content-Disposition` is missing. */
+  filename: string;
+};
+
+/**
+ * Downloads one booking's PDF receipt (Scheduling S12).
+ * `GET /api/v1/public/tenants/{slug}/bookings/{reference}/receipt?token=...`
+ *
+ * `receiptToken` — from the booking-creation response's `booking.receipt_token`
+ * — is the SOLE access secret; `reference` is a readability nicety the
+ * backend re-validates against the token's own booking, never authoritative
+ * alone. A wrong token, a token from another tenant, or a mismatched
+ * reference all collapse to `BOOKING_NOT_FOUND` — the backend never
+ * discloses which, so this call must not either.
+ *
+ * Fully anonymous: no bearer token, no cookie, no dashboard auth — exactly
+ * like every other public booking call in this module.
+ */
+export function downloadBookingReceipt(
+  slug: string,
+  reference: string,
+  receiptToken: string,
+  signal?: AbortSignal
+): Promise<BookingReceiptDownload> {
+  return publicApiGetBlob(
+    `/v1/public/tenants/${encodeURIComponent(slug)}/bookings/${encodeURIComponent(reference)}/receipt`,
+    { token: receiptToken },
+    signal
+  ).then(({ blob, filename }) => ({ blob, filename: filename ?? `booking-${reference}.pdf` }));
 }

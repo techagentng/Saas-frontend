@@ -101,6 +101,7 @@ export function BookingReview({ slug }: { slug: string }) {
     return (
       <PublicBookingLayout tenant={tenant} images={images}>
         <BookingConfirmation
+          slug={slug}
           booking={mutation.data.booking}
           businessName={tenant.name}
           priceMinor={service.price_minor}

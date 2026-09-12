@@ -6,6 +6,7 @@ import type { PublicBookingConfirmation } from "@/modules/public-booking/types";
 
 import { BookingSummary } from "./booking-summary";
 import { formatCivilDate } from "./date";
+import { ReceiptDownloadButton } from "./receipt-download-button";
 
 /**
  * Shown ONLY after the backend has returned a persisted booking (`201`).
@@ -17,12 +18,14 @@ import { formatCivilDate } from "./date";
  * reader user hears the outcome.
  */
 export function BookingConfirmation({
+  slug,
   booking,
   businessName,
   priceMinor,
   currency,
   durationMinutes,
 }: {
+  slug: string;
   booking: PublicBookingConfirmation;
   businessName: string;
   /** From the selected service DTO — the response has no price. */
@@ -79,6 +82,12 @@ export function BookingConfirmation({
           currency,
           extraRows: [{ label: "Timezone", value: booking.timezone }],
         }}
+      />
+
+      <ReceiptDownloadButton
+        slug={slug}
+        reference={booking.reference}
+        receiptToken={booking.receipt_token}
       />
 
       <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-500">
