@@ -81,15 +81,15 @@ describe("Sidebar — never renders empty", () => {
   });
 
   it("shows the roadmap group as non-clickable rows, never as links", () => {
-    // "Technicians" was promoted out of this list into the real nav (as
-    // "Team") when Scheduling S3 shipped — see dashboard-nav.ts.
+    // "Technicians" (S3, as "Team") and "Bookings" (S11) were both promoted
+    // out of this list into the real nav — see dashboard-nav.ts.
     setup({ permissions: ["service.read"] });
 
-    for (const label of ["Availability", "Bookings", "Customers"]) {
+    for (const label of ["Availability", "Customers"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: new RegExp(label, "i") })).not.toBeInTheDocument();
     }
-    expect(screen.getAllByText("Soon")).toHaveLength(3);
+    expect(screen.getAllByText("Soon")).toHaveLength(2);
   });
 });
 
@@ -154,6 +154,35 @@ describe("Sidebar — vertical-aware roster label (V1)", () => {
 
     expect(screen.getByRole("link", { name: "Drivers" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Technicians" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Sidebar — Bookings (Scheduling S11)", () => {
+  it("shows the bookings link for a scheduling tenant with booking.read", () => {
+    setup({ permissions: ["booking.read"], businessType: "NAIL_TECHNICIAN" });
+
+    expect(screen.getByRole("link", { name: "Appointments" })).toHaveAttribute(
+      "href",
+      "/dashboard/bookings"
+    );
+  });
+
+  it("hides the bookings link without the permission", () => {
+    setup({ permissions: [], businessType: "NAIL_TECHNICIAN" });
+
+    expect(screen.queryByRole("link", { name: /appointments|bookings/i })).not.toBeInTheDocument();
+  });
+
+  it("hides the bookings link for a non-scheduling vertical, even with the permission", () => {
+    setup({ permissions: ["booking.read"], businessType: "RESTAURANT" });
+
+    expect(screen.queryByRole("link", { name: /appointments|bookings/i })).not.toBeInTheDocument();
+  });
+
+  it("hides the bookings link for an unknown/null business type, same as Services", () => {
+    setup({ permissions: ["booking.read"], businessType: null });
+
+    expect(screen.queryByRole("link", { name: /appointments|bookings/i })).not.toBeInTheDocument();
   });
 });
 

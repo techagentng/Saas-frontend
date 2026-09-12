@@ -64,6 +64,26 @@ describe("filterNavItems — Team (Scheduling S3)", () => {
   });
 });
 
+describe("filterNavItems — Bookings (Scheduling S11)", () => {
+  it("shows Bookings with the right business type AND booking.read", () => {
+    expect(visibleLabels(["booking.read"], "NAIL_TECHNICIAN")).toContain("Bookings");
+  });
+
+  it("hides Bookings with the right business type but no booking.read", () => {
+    expect(visibleLabels([], "NAIL_TECHNICIAN")).not.toContain("Bookings");
+  });
+
+  it("hides Bookings with booking.read but a non-scheduling business type", () => {
+    expect(visibleLabels(["booking.read"], "RESTAURANT")).not.toContain("Bookings");
+    expect(visibleLabels(["booking.read"], "HOTEL")).not.toContain("Bookings");
+    expect(visibleLabels(["booking.read"], "TRANSPORT")).not.toContain("Bookings");
+  });
+
+  it("fails closed on a legacy tenant with no business type, even with the permission", () => {
+    expect(visibleLabels(["booking.read"], null)).not.toContain("Bookings");
+  });
+});
+
 describe("filterNavItems — each predicate independently", () => {
   const icon = () => null;
 

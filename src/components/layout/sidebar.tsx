@@ -22,11 +22,15 @@ export function Sidebar() {
     businessType: currentTenant?.business_type,
   });
 
-  // The nav config carries a static fallback label ("Team"); the visible
-  // label for the staff roster follows the tenant's vertical
-  // ("Technicians", "Drivers", or "Team"). The route itself never changes.
-  const labelFor = (href: string, fallback: string) =>
-    href === "/dashboard/team" ? vertical.team.plural : fallback;
+  // The nav config carries a static fallback label ("Team"/"Bookings"); the
+  // visible label follows the tenant's vertical ("Technicians" or
+  // "Appointments" for nail, generic terms elsewhere). The route itself
+  // never changes.
+  const labelFor = (href: string, fallback: string) => {
+    if (href === "/dashboard/team") return vertical.team.plural;
+    if (href === "/dashboard/bookings") return vertical.terminology.bookings;
+    return fallback;
+  };
 
   // Longest-prefix wins, so /dashboard/services highlights "Services" alone.
   // A plain `startsWith` per item lit up "Dashboard" as well, since every

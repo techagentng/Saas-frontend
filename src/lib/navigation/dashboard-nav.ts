@@ -16,8 +16,8 @@ const CustomersIcon = Contact as ComponentType<SVGProps<SVGSVGElement>>;
 /**
  * Configuration-driven sidebar nav. Entries are added only as the real route
  * and its confirmed backend permission actually land — no placeholder items are
- * fabricated for features that do not exist yet (Availability, Bookings,
- * Customers all remain absent by design).
+ * fabricated for features that do not exist yet (Availability, Customers
+ * remain absent by design).
  *
  * "Services" is vertical-gated: it exists only for the business types that
  * use the appointment-scheduling booking model, and only for a user the
@@ -28,6 +28,13 @@ const CustomersIcon = Contact as ComponentType<SVGProps<SVGSVGElement>>;
  * transport business all have staff — so the schema carries no business-type
  * coupling and neither does this entry. It is permission-gated on
  * `staff.read` alone.
+ *
+ * "Bookings" (Scheduling S11) IS vertical-gated, the same reasoning as
+ * Services: a booking only exists for the appointment-scheduling model this
+ * platform currently supports (the public S10 create path is itself gated on
+ * `SCHEDULING_BUSINESS_TYPES`), so a non-scheduling workspace has nothing to
+ * list here. Permission-gated on `booking.read`; cancellation is gated
+ * separately, inside the page, on `booking.update`.
  */
 export const dashboardNavItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
@@ -44,6 +51,13 @@ export const dashboardNavItems: NavItem[] = [
     icon: TeamIcon,
     permission: "staff.read",
   },
+  {
+    label: "Bookings",
+    href: "/dashboard/bookings",
+    icon: BookingsIcon,
+    permission: "booking.read",
+    businessTypes: SCHEDULING_BUSINESS_TYPES,
+  },
 ];
 
 /**
@@ -56,7 +70,7 @@ export const dashboardNavItems: NavItem[] = [
  * routes that actually exist and is what `filterNavItems` gates. Promoting one
  * of these is a two-line move — add `href` + `permission` to the real list,
  * delete the row here — once the feature that backs it ships. "Technicians"
- * (S4) was the most recent promotion, now `dashboardNavItems`' "Team" entry.
+ * (S4) and "Bookings" (S11) were the two most recent promotions.
  */
 export type UpcomingNavItem = {
   label: string;
@@ -67,7 +81,6 @@ export type UpcomingNavItem = {
 
 export const upcomingNavItems: UpcomingNavItem[] = [
   { label: "Availability", icon: AvailabilityIcon, lands: "S6" },
-  { label: "Bookings", icon: BookingsIcon, lands: "S11" },
   { label: "Customers", icon: CustomersIcon, lands: "S11" },
 ];
 

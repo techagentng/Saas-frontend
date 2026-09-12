@@ -35,7 +35,14 @@ export type KnownPermissionCode =
   | "staff.read"
   | "staff.create"
   | "staff.update"
-  | "staff.archive";
+  | "staff.archive"
+  // Scheduling S11 (migration 000017_seed_booking_permissions). BUSINESS_OWNER
+  // holds both; there is deliberately no `booking.cancel` — cancellation
+  // rides on `booking.update`, the same reasoning the backend route comment
+  // gives, because it changes a booking's state rather than being a new kind
+  // of action.
+  | "booking.read"
+  | "booking.update";
 
 /**
  * Backend-defined capability identifier. Not restricted to

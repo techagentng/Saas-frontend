@@ -44,6 +44,9 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   // Scheduling service images
   IMAGE_NOT_FOUND: "That image no longer exists. Refresh to see the current gallery.",
 
+  // Scheduling S11/S12 bookings
+  BOOKING_NOT_FOUND: "That booking no longer exists. Refresh to see the current list.",
+
   // Request shape
   INVALID_REQUEST: "Something in that request wasn't right. Please check and try again.",
   CONFLICT: "That conflicts with something that already exists.",
