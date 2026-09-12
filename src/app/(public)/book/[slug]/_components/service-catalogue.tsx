@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { ServiceImageCarousel } from "@/components/service-image-carousel";
 import { formatDuration } from "@/lib/scheduling/duration";
 import {
   ALL_SERVICES_CATEGORY_ID,
@@ -11,7 +10,6 @@ import {
 } from "@/modules/public-booking/categories";
 import type { PublicService } from "@/modules/public-booking/types";
 
-import { serviceCoverImage } from "./booking-images";
 import { formatServicePrice } from "./format";
 import { ServiceCategoryTabs } from "./service-category-tabs";
 
@@ -25,26 +23,22 @@ import { ServiceCategoryTabs } from "./service-category-tabs";
  * link into the existing S9 flow (`/book/{slug}/availability?service_id=…`),
  * so URL state, routing and the technician → date → time progression are
  * untouched.
+ *
+ * Rows carry no image — a service's photo lives only in the visual panel's
+ * slideshow (see `BookingVisualPanel` / `resolveServicePreviewImage`), never
+ * duplicated as a thumbnail here.
  */
 export function ServiceCatalogue({
   slug,
   services,
   currency,
   selectedServiceId = null,
-  onPreviewService,
 }: {
   slug: string;
   services: PublicService[];
   currency: string | null;
   /** Highlighted if the customer came back from a later step. */
   selectedServiceId?: string | null;
-  /**
-   * Called with a service's id while the customer is hovering/focusing its
-   * row, and with `null` when they leave — lets the visual panel feature that
-   * service's real photo instead of the decorative default. Optional so the
-   * catalogue still works without a panel to drive.
-   */
-  onPreviewService?: (serviceId: string | null) => void;
 }) {
   const categories = useMemo(() => groupServicesByCategory(services), [services]);
   const [activeId, setActiveId] = useState(categories[0]?.id ?? ALL_SERVICES_CATEGORY_ID);
@@ -65,7 +59,6 @@ export function ServiceCatalogue({
             service={service}
             currency={currency}
             isSelected={service.id === selectedServiceId}
-            onPreview={onPreviewService}
           />
         ))}
       </ul>
@@ -78,43 +71,22 @@ export function ServiceCatalogueItem({
   service,
   currency,
   isSelected = false,
-  onPreview,
 }: {
   slug: string;
   service: PublicService;
   currency: string | null;
   isSelected?: boolean;
-  onPreview?: (serviceId: string | null) => void;
 }) {
   const duration = formatDuration(service.duration_minutes);
   const price = formatServicePrice(service.price_minor, currency);
-  const cover = serviceCoverImage(service);
 
   return (
     <li
       className={`border-b border-[#E7DAD0] py-6 transition-colors dark:border-slate-800 ${
         isSelected ? "-mx-4 rounded-2xl bg-white px-4 shadow-soft dark:bg-slate-900" : ""
       }`}
-      onMouseEnter={() => onPreview?.(service.id)}
-      onMouseLeave={() => onPreview?.(null)}
-      onFocus={() => onPreview?.(service.id)}
-      onBlur={() => onPreview?.(null)}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-        {isSelected ? (
-          <ServiceImageCarousel
-            images={service.images}
-            serviceName={service.name}
-            className="aspect-[16/9] w-full sm:aspect-[4/3] sm:w-56 sm:shrink-0"
-          />
-        ) : (
-          <ServiceImageCarousel
-            images={cover ? [cover] : []}
-            serviceName={service.name}
-            className="h-16 w-16 shrink-0"
-          />
-        )}
-
         <div className="min-w-0 flex-1 space-y-1.5">
           <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
             {service.name}

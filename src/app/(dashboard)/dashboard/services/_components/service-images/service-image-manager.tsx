@@ -3,13 +3,8 @@
 import { useState } from "react";
 
 import { apiErrorMessage } from "@/lib/api/error-messages";
-import { validateImageFiles } from "@/lib/media/image-validation";
-import {
-  useReorderServiceImages,
-  useServiceImages,
-  useUpdateServiceImage,
-  useUploadServiceImages,
-} from "@/modules/service-images/queries";
+import { validateSingleImageFile } from "@/lib/media/image-validation";
+import { useDeleteServiceImage, useServiceImages, useUploadServiceImages } from "@/modules/service-images/queries";
 import type { ServiceImage } from "@/modules/service-images/types";
 import { useCan } from "@/providers/permissions-provider";
 
@@ -18,80 +13,67 @@ import { ImageDropzone } from "./image-dropzone";
 import { ImageTile } from "./image-tile";
 
 /**
- * The existing service edit dialog's "Service Images" section — the
+ * The existing service edit dialog's "Service Image" section — the
  * server-backed counterpart of the Add Service builder's
  * `ServiceImagePicker`. Everything here is a real mutation against the
  * already-created service named by `serviceId`, invalidated through
  * `modules/service-images/queries`, never local-only state.
  *
+ * One photo per service: picking a new file replaces whatever is already
+ * there (delete the old one, then upload the new one) rather than adding to
+ * a gallery.
+ *
  * `service.read` governs whether this renders at all (the caller only mounts
  * it where the dialog is already visible, i.e. already gated); `service.update`
- * governs every control inside it — with only `service.read`, the gallery is
+ * governs every control inside it — with only `service.read`, the photo is
  * still shown, just with nothing to click.
  */
 export function ServiceImageManager({ tenantId, serviceId }: { tenantId: string; serviceId: string }) {
   const canUpdate = useCan("service.update");
   const imagesQuery = useServiceImages(tenantId, serviceId);
   const uploadImages = useUploadServiceImages(tenantId, serviceId);
-  const updateImage = useUpdateServiceImage(tenantId, serviceId);
-  const reorderImages = useReorderServiceImages(tenantId, serviceId);
+  const deleteImage = useDeleteServiceImage(tenantId, serviceId);
 
-  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<ServiceImage | null>(null);
+  const [isReplacing, setIsReplacing] = useState(false);
 
   const images = imagesQuery.data ?? [];
+  const cover = images.find((image) => image.is_primary) ?? images[0] ?? null;
 
-  async function handleFilesSelected(files: File[]) {
-    setUploadErrors([]);
+  async function handleFileSelected(file: File) {
+    setUploadError(null);
     setActionError(null);
-    const { accepted, rejected } = validateImageFiles(images.length, files);
-    if (rejected.length > 0) {
-      setUploadErrors(rejected.map((r) => `${r.file.name}: ${r.reason}`));
-    }
-    if (accepted.length === 0) return;
 
-    try {
-      await uploadImages.mutateAsync(accepted);
-    } catch (err) {
-      setUploadErrors((prev) => [...prev, apiErrorMessage(err)]);
+    const { file: validFile, reason } = validateSingleImageFile(file);
+    if (!validFile) {
+      setUploadError(reason);
+      return;
     }
-  }
 
-  async function handleSetCover(imageId: string) {
-    setActionError(null);
+    setIsReplacing(true);
     try {
-      await updateImage.mutateAsync({ imageId, input: { is_primary: true } });
+      if (cover) await deleteImage.mutateAsync(cover.id);
+      await uploadImages.mutateAsync([validFile]);
     } catch (err) {
       setActionError(apiErrorMessage(err));
-    }
-  }
-
-  async function handleMove(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= images.length) return;
-
-    const next = [...images];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-    setActionError(null);
-    try {
-      await reorderImages.mutateAsync(next.map((image) => image.id));
-    } catch (err) {
-      setActionError(apiErrorMessage(err));
+    } finally {
+      setIsReplacing(false);
     }
   }
 
   return (
     <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
       <div>
-        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Service Images</h4>
+        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Service Image</h4>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Add photos that customers will see while booking this service.
+          The photo customers see while booking this service.
         </p>
       </div>
 
       {imagesQuery.isPending && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">Loading images…</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Loading image…</p>
       )}
 
       {imagesQuery.isError && (
@@ -105,43 +87,36 @@ export function ServiceImageManager({ tenantId, serviceId }: { tenantId: string;
 
       {imagesQuery.isSuccess && (
         <>
-          {images.length > 0 && (
+          {cover && (
             <ul className="flex flex-wrap gap-2">
-              {images.map((image, index) => (
-                <ImageTile
-                  key={image.id}
-                  src={image.url}
-                  alt={image.alt_text ?? "Service image"}
-                  isCover={image.is_primary}
-                  onSetCover={
-                    canUpdate && !image.is_primary ? () => handleSetCover(image.id) : undefined
-                  }
-                  onRemove={canUpdate ? () => setDeleting(image) : undefined}
-                  onMoveLeft={canUpdate && index > 0 ? () => handleMove(index, -1) : undefined}
-                  onMoveRight={
-                    canUpdate && index < images.length - 1 ? () => handleMove(index, 1) : undefined
-                  }
-                />
-              ))}
+              <ImageTile
+                src={cover.url}
+                alt={cover.alt_text ?? "Service image"}
+                isCover={false}
+                status={isReplacing ? "uploading" : "idle"}
+                onRemove={canUpdate && !isReplacing ? () => setDeleting(cover) : undefined}
+              />
             </ul>
           )}
 
           {canUpdate && (
-            <ImageDropzone onFilesSelected={handleFilesSelected} maxReached={images.length >= 5} />
+            <ImageDropzone
+              onFileSelected={handleFileSelected}
+              hasImage={Boolean(cover)}
+              disabled={isReplacing}
+            />
           )}
 
-          {!canUpdate && images.length === 0 && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">No images added yet.</p>
+          {!canUpdate && !cover && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">No image added yet.</p>
           )}
         </>
       )}
 
-      {uploadErrors.length > 0 && (
-        <ul role="alert" className="flex flex-col gap-0.5 text-xs font-medium text-rose-600 dark:text-rose-400">
-          {uploadErrors.map((message, index) => (
-            <li key={index}>{message}</li>
-          ))}
-        </ul>
+      {uploadError && (
+        <p role="alert" className="text-xs font-medium text-rose-600 dark:text-rose-400">
+          {uploadError}
+        </p>
       )}
 
       {actionError && (
@@ -156,7 +131,7 @@ export function ServiceImageManager({ tenantId, serviceId }: { tenantId: string;
           tenantId={tenantId}
           serviceId={serviceId}
           image={deleting}
-          otherImageCount={images.length - 1}
+          otherImageCount={0}
           onClose={() => setDeleting(null)}
         />
       )}

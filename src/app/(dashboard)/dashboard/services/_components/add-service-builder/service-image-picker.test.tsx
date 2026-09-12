@@ -12,10 +12,6 @@ function makeFile(name: string, type: string, size = 1024): File {
   return file;
 }
 
-function draftImage(key: string, file: File): DraftImage {
-  return { key, file, previewUrl: `blob:${key}` };
-}
-
 beforeEach(() => {
   let counter = 0;
   vi.stubGlobal("URL", {
@@ -26,30 +22,22 @@ beforeEach(() => {
 });
 
 /** A thin controlled-component harness so tests can inspect state after an onChange call. */
-function Harness({ initialImages = [] }: { initialImages?: DraftImage[] }) {
-  const [images, setImages] = useState<DraftImage[]>(initialImages);
-  const [coverKey, setCoverKey] = useState<string | null>(null);
-  return (
-    <ServiceImagePicker
-      images={images}
-      coverKey={coverKey}
-      onImagesChange={setImages}
-      onCoverChange={setCoverKey}
-    />
-  );
+function Harness({ initialImage = null }: { initialImage?: DraftImage | null }) {
+  const [image, setImage] = useState<DraftImage | null>(initialImage);
+  return <ServiceImagePicker image={image} onImageChange={setImage} />;
 }
 
 describe("ServiceImagePicker — empty", () => {
-  it("renders the dropzone and no previews", () => {
+  it("renders the dropzone and no preview", () => {
     render(<Harness />);
 
-    expect(screen.getByText(/drag & drop service images/i)).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop a photo/i)).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });
 
-describe("ServiceImagePicker — selecting files", () => {
-  it("previews one selected image and defaults it to cover", async () => {
+describe("ServiceImagePicker — selecting a file", () => {
+  it("previews the selected image", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
@@ -57,41 +45,35 @@ describe("ServiceImagePicker — selecting files", () => {
     await user.upload(input, makeFile("a.jpg", "image/jpeg"));
 
     expect(screen.getByAltText("a.jpg")).toBeInTheDocument();
-    expect(screen.getByText("Cover")).toBeInTheDocument();
   });
 
-  it("previews multiple selected images", async () => {
+  it("replaces the previous image when a new one is picked", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    await user.upload(input, [
-      makeFile("a.jpg", "image/jpeg"),
-      makeFile("b.png", "image/png"),
-      makeFile("c.webp", "image/webp"),
-    ]);
-
+    await user.upload(input, makeFile("a.jpg", "image/jpeg"));
     expect(screen.getByAltText("a.jpg")).toBeInTheDocument();
+
+    await user.upload(input, makeFile("b.png", "image/png"));
+
+    expect(screen.queryByAltText("a.jpg")).not.toBeInTheDocument();
     expect(screen.getByAltText("b.png")).toBeInTheDocument();
-    expect(screen.getByAltText("c.webp")).toBeInTheDocument();
-    // Only the first is cover by default.
-    expect(screen.getAllByText("Cover")).toHaveLength(1);
+    expect(screen.getAllByRole("img")).toHaveLength(1);
   });
 
-  it("lets the owner choose a different cover image", async () => {
+  it("only keeps the first file when several are selected at once", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     await user.upload(input, [makeFile("a.jpg", "image/jpeg"), makeFile("b.png", "image/png")]);
 
-    await user.click(screen.getByRole("button", { name: /set as cover/i }));
-
-    expect(screen.getByAltText("b.png").closest("li")).toHaveTextContent("Cover");
-    expect(screen.getByAltText("a.jpg").closest("li")).not.toHaveTextContent("Cover");
+    expect(screen.getByAltText("a.jpg")).toBeInTheDocument();
+    expect(screen.queryByAltText("b.png")).not.toBeInTheDocument();
   });
 
-  it("removes a selected image", async () => {
+  it("removes the selected image", async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
@@ -104,20 +86,20 @@ describe("ServiceImagePicker — selecting files", () => {
 });
 
 describe("ServiceImagePicker — validation", () => {
-  it("rejects an unsupported MIME type without dropping the valid files", () => {
+  it("rejects an unsupported MIME type", () => {
     render(<Harness />);
 
     // Dropped (not selected via the file picker), because a picker's
     // `accept` attribute pre-filters what a browser even offers as a
     // choice — a real-world way an invalid file still reaches the app is a
     // drag-and-drop, which the OS never filters by MIME type.
-    const dropzone = screen.getByText(/drag & drop service images/i).closest("label") as HTMLElement;
+    const dropzone = screen.getByText(/drag & drop a photo/i).closest("label") as HTMLElement;
     fireEvent.drop(dropzone, {
-      dataTransfer: { files: [makeFile("a.jpg", "image/jpeg"), makeFile("a.gif", "image/gif")] },
+      dataTransfer: { files: [makeFile("a.gif", "image/gif")] },
     });
 
-    expect(screen.getByAltText("a.jpg")).toBeInTheDocument();
     expect(screen.getByText(/only jpg, png and webp/i)).toBeInTheDocument();
+    expect(screen.queryByAltText("a.gif")).not.toBeInTheDocument();
   });
 
   it("rejects a file over 5 MB", async () => {
@@ -128,14 +110,5 @@ describe("ServiceImagePicker — validation", () => {
     await user.upload(input, makeFile("big.jpg", "image/jpeg", 6 * 1024 * 1024));
 
     expect(screen.getByText(/5 mb or smaller/i)).toBeInTheDocument();
-  });
-
-  it("refuses a 6th image and disables the dropzone at 5", async () => {
-    const existing = Array.from({ length: 5 }, (_, i) =>
-      draftImage(`k${i}`, makeFile(`${i}.jpg`, "image/jpeg"))
-    );
-    render(<Harness initialImages={existing} />);
-
-    expect(screen.getByText(/maximum of 5 images reached/i)).toBeInTheDocument();
   });
 });

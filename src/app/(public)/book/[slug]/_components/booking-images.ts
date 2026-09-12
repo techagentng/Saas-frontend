@@ -65,6 +65,8 @@ export function serviceCoverImage(service: Pick<PublicService, "images">): Publi
 /**
  * A real, customer-uploaded photo for the visual panel — `null` when this
  * service has no images, so the caller falls back to `resolveBookingImage`.
+ * Used to build the catalogue step's ambient slideshow (one photo per
+ * service).
  */
 export function resolveServicePreviewImage(
   service: Pick<PublicService, "name" | "images">
@@ -72,4 +74,21 @@ export function resolveServicePreviewImage(
   const cover = serviceCoverImage(service);
   if (!cover) return null;
   return { src: cover.url, alt: cover.alt_text?.trim() || `${service.name} service` };
+}
+
+/**
+ * Every one of a single service's photos, for the visual panel — used once a
+ * specific service is chosen (technician/time and review steps), where the
+ * panel features that one service rather than the whole catalogue. `[]` when
+ * it has none, so the caller falls back to `resolveBookingImage`.
+ */
+export function resolveServicePreviewImages(
+  service: Pick<PublicService, "name" | "images">
+): BookingVisualPanelImage[] {
+  return [...service.images]
+    .sort((a, b) => {
+      if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+      return a.sort_order - b.sort_order;
+    })
+    .map((image) => ({ src: image.url, alt: image.alt_text?.trim() || `${service.name} service` }));
 }

@@ -229,10 +229,8 @@ function DraftCard({
       </div>
 
       <ServiceImagePicker
-        images={draft.images}
-        coverKey={draft.coverImageKey}
-        onImagesChange={(images) => onChange({ images })}
-        onCoverChange={(coverImageKey) => onChange({ coverImageKey })}
+        image={draft.image}
+        onImageChange={(image) => onChange({ image })}
         disabled={isBusy}
         serviceName={draft.name.trim()}
       />

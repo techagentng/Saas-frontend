@@ -64,3 +64,19 @@ export function validateImageFiles(existingCount: number, files: File[]): ImageV
 
   return { accepted, rejected };
 }
+
+/**
+ * Validates one file for a single-image upload slot (the service edit
+ * dialog's "Service Image" and the Add Service builder's photo picker,
+ * neither of which has a count ceiling to enforce — a new file always
+ * replaces whatever was there). Just the type/size rules, against one file.
+ */
+export function validateSingleImageFile(file: File): { file: File | null; reason: string | null } {
+  if (!(file.type in ALLOWED_IMAGE_MIME_TYPES)) {
+    return { file: null, reason: "Only JPG, PNG and WebP images are supported." };
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    return { file: null, reason: "Each image must be 5 MB or smaller." };
+  }
+  return { file, reason: null };
+}

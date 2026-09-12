@@ -8,8 +8,8 @@ import { ChevronLeft, ChevronRight, RotateCw, Star, X } from "lucide-react";
  * (persisted, server-hosted images). A plain `<img>` rather than
  * `next/image`: these are small, transient dashboard thumbnails (often
  * `blob:` object URLs, which `next/image` cannot optimize anyway), not the
- * performance-sensitive public-facing surface — that's `ServiceImageCarousel`,
- * which does use `next/image`.
+ * performance-sensitive public-facing surface — that's the booking page's
+ * `BookingVisualPanel`, which does use `next/image`.
  */
 export function ImageTile({
   src,

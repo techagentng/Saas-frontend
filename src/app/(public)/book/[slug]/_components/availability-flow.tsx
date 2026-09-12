@@ -8,7 +8,7 @@ import { formatDuration } from "@/lib/scheduling/duration";
 import { usePublicServiceCatalog, usePublicTenant } from "@/modules/public-booking/queries";
 import type { PublicAvailabilitySlot, PublicService } from "@/modules/public-booking/types";
 
-import { resolveServicePreviewImage } from "./booking-images";
+import { resolveServicePreviewImages } from "./booking-images";
 import {
   BackToServicesLink,
   BookingErrorState,
@@ -155,7 +155,7 @@ export function AvailabilityFlow({ slug }: { slug: string }) {
   const step: BookingStep = staffId ? "time" : "technician";
 
   return (
-    <PublicBookingLayout tenant={tenant} previewImage={resolveServicePreviewImage(service)}>
+    <PublicBookingLayout tenant={tenant} images={resolveServicePreviewImages(service)}>
       <div className="space-y-8">
         <header className="space-y-4">
           <BookingProgress current={step} />

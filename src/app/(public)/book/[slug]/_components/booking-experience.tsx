@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { isApiError } from "@/lib/api/errors";
 import { usePublicServiceCatalog, usePublicTenant } from "@/modules/public-booking/queries";
@@ -41,14 +41,15 @@ export function BookingExperience({ slug }: { slug: string }) {
   // Only fires once the identity endpoint has confirmed the nail vertical.
   const catalogQuery = usePublicServiceCatalog(slug, isNailTenant);
 
-  // The service the customer is currently hovering/focusing in the list —
-  // its real photo takes over the visual panel; `null` (nothing hovered)
-  // falls back to the decorative default. See `ServiceCatalogue`.
-  const [previewedServiceId, setPreviewedServiceId] = useState<string | null>(null);
-  const previewImage = useMemo<BookingVisualPanelImage | null>(() => {
-    const service = catalogQuery.data?.services.find((s) => s.id === previewedServiceId);
-    return service ? resolveServicePreviewImage(service) : null;
-  }, [previewedServiceId, catalogQuery.data]);
+  // One photo per service, in catalogue order — the visual panel slides
+  // through this as an ambient tour of the whole menu. Services with no
+  // photo are simply absent from the slideshow, never a broken slide.
+  const images = useMemo<BookingVisualPanelImage[]>(() => {
+    const services = catalogQuery.data?.services ?? [];
+    return services
+      .map((service) => resolveServicePreviewImage(service))
+      .filter((image): image is BookingVisualPanelImage => image !== null);
+  }, [catalogQuery.data]);
 
   if (tenantQuery.isPending) {
     return (
@@ -80,7 +81,7 @@ export function BookingExperience({ slug }: { slug: string }) {
   }
 
   return (
-    <PublicBookingLayout tenant={tenant} previewImage={previewImage}>
+    <PublicBookingLayout tenant={tenant} images={images}>
       <div className="space-y-9">
         <BusinessHeader tenant={tenant} />
 
@@ -104,7 +105,6 @@ export function BookingExperience({ slug }: { slug: string }) {
             onRetry={() => catalogQuery.refetch()}
             services={catalogQuery.data?.services ?? []}
             currency={catalogQuery.data?.currency ?? null}
-            onPreviewService={setPreviewedServiceId}
           />
         </section>
       </div>
@@ -119,7 +119,6 @@ function CatalogSection({
   onRetry,
   services,
   currency,
-  onPreviewService,
 }: {
   slug: string;
   isPending: boolean;
@@ -127,7 +126,6 @@ function CatalogSection({
   onRetry: () => void;
   services: PublicService[];
   currency: string | null;
-  onPreviewService: (serviceId: string | null) => void;
 }) {
   if (isPending) return <CatalogSkeleton />;
 
@@ -142,14 +140,7 @@ function CatalogSection({
 
   if (services.length === 0) return <EmptyCatalog />;
 
-  return (
-    <ServiceCatalogue
-      slug={slug}
-      services={services}
-      currency={currency}
-      onPreviewService={onPreviewService}
-    />
-  );
+  return <ServiceCatalogue slug={slug} services={services} currency={currency} />;
 }
 
 /** A slug that does not resolve to a publicly visible tenant, in any of its guises. */

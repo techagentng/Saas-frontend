@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { validateImageFiles } from "@/lib/media/image-validation";
+import { validateSingleImageFile } from "@/lib/media/image-validation";
 
 import { ImageDropzone } from "../service-images/image-dropzone";
 import { ImageTile } from "../service-images/image-tile";
@@ -11,143 +11,99 @@ import type { DraftImage } from "./types";
 /**
  * The Add Service builder's image section — Customize step, before the
  * service exists. There is no service id yet to upload against, so this
- * holds plain `File` objects and `URL.createObjectURL` previews entirely in
+ * holds a single plain `File` and a `URL.createObjectURL` preview entirely in
  * local state (owned by the parent draft — see `add-service-builder.tsx`),
  * and never calls the network. The actual upload happens once, right after
- * this draft's service is created (see `handleSubmit`), using these exact
- * files in this exact order.
+ * this draft's service is created (see `handleSubmit`), using this exact
+ * file.
  *
- * `coverKey === null` means "no explicit choice yet" — the first image is the
- * effective cover, matching the backend's own rule that the first-ever
- * upload becomes primary. Choosing a different one sets `coverKey` and stays
- * sticky across reordering.
+ * One photo per service: picking a new file replaces whatever was already
+ * chosen rather than adding to it.
  */
 export function ServiceImagePicker({
-  images,
-  coverKey,
-  onImagesChange,
-  onCoverChange,
+  image,
+  onImageChange,
   disabled = false,
   serviceName,
 }: {
-  images: DraftImage[];
-  coverKey: string | null;
-  onImagesChange: (next: DraftImage[]) => void;
-  onCoverChange: (key: string | null) => void;
+  image: DraftImage | null;
+  onImageChange: (next: DraftImage | null) => void;
   disabled?: boolean;
   /**
    * Named on the caller's draft, so when several services are being
-   * customized at once each one's image section reads as "Photos for X"
-   * rather than an identical, unlabelled "Service Images" repeated once per
+   * customized at once each one's image section reads as "Photo for X"
+   * rather than an identical, unlabelled "Service Image" repeated once per
    * card — which otherwise looks like the same section duplicated.
    */
   serviceName?: string;
 }) {
-  const [errors, setErrors] = useState<string[]>([]);
-  const effectiveCoverKey = coverKey ?? images[0]?.key ?? null;
+  const [error, setError] = useState<string | null>(null);
 
-  // Revokes every preview URL still held by this draft the moment its picker
+  // Revokes the preview URL still held by this draft the moment its picker
   // unmounts — whether because the draft was removed, the builder closed, or
-  // the whole builder remounted on a tenant switch. Individual removals
-  // revoke inline (see handleRemove) so this is specifically the "whatever
-  // is left when this stops existing" backstop, not the only revoke path.
-  const imagesRef = useRef(images);
+  // the whole builder remounted on a tenant switch. Replacing/removing the
+  // image revokes inline (see handleFileSelected/handleRemove) so this is
+  // specifically the "whatever is left when this stops existing" backstop.
+  const imageRef = useRef(image);
   useEffect(() => {
-    imagesRef.current = images;
-  }, [images]);
+    imageRef.current = image;
+  }, [image]);
   useEffect(
     () => () => {
-      for (const image of imagesRef.current) URL.revokeObjectURL(image.previewUrl);
+      if (imageRef.current) URL.revokeObjectURL(imageRef.current.previewUrl);
     },
     []
   );
 
-  function handleFilesSelected(files: File[]) {
-    const { accepted, rejected } = validateImageFiles(images.length, files);
-
-    if (rejected.length > 0) {
-      setErrors(rejected.map((r) => `${r.file.name}: ${r.reason}`));
+  function handleFileSelected(file: File) {
+    setError(null);
+    const { file: validFile, reason } = validateSingleImageFile(file);
+    if (!validFile) {
+      setError(reason);
+      return;
     }
-    if (accepted.length === 0) return;
 
-    const nextImages: DraftImage[] = accepted.map((file) => ({
+    if (image) URL.revokeObjectURL(image.previewUrl);
+    onImageChange({
       key: `img-${Math.random().toString(36).slice(2)}`,
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
-    onImagesChange([...images, ...nextImages]);
+      file: validFile,
+      previewUrl: URL.createObjectURL(validFile),
+    });
   }
 
-  function handleRemove(key: string) {
-    const removed = images.find((image) => image.key === key);
-    if (removed) URL.revokeObjectURL(removed.previewUrl);
-    onImagesChange(images.filter((image) => image.key !== key));
-    if (coverKey === key) onCoverChange(null);
-  }
-
-  function handleMove(key: string, direction: -1 | 1) {
-    const index = images.findIndex((image) => image.key === key);
-    const targetIndex = index + direction;
-    if (index === -1 || targetIndex < 0 || targetIndex >= images.length) return;
-
-    const next = [...images];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-    onImagesChange(next);
+  function handleRemove() {
+    if (image) URL.revokeObjectURL(image.previewUrl);
+    onImageChange(null);
   }
 
   return (
     <div className="flex flex-col gap-3">
       <div>
         <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          {serviceName ? `Photos for ${serviceName}` : "Service Images"}
+          {serviceName ? `Photo for ${serviceName}` : "Service Image"}
         </h4>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Add photos that customers will see while booking this service.
-        </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          Upload up to 5 images. JPG, PNG or WebP. Maximum 5 MB each.
+          Add a photo customers will see while booking this service.
         </p>
       </div>
 
-      {!disabled && (
-        <ImageDropzone
-          onFilesSelected={handleFilesSelected}
-          maxReached={images.length >= 5}
-        />
-      )}
-
-      {errors.length > 0 && (
-        <ul role="alert" className="flex flex-col gap-0.5 text-xs font-medium text-rose-600 dark:text-rose-400">
-          {errors.map((message, index) => (
-            <li key={index}>{message}</li>
-          ))}
-        </ul>
-      )}
-
-      {images.length > 0 && (
+      {image && (
         <ul className="flex flex-wrap gap-2">
-          {images.map((image, index) => {
-            const isCover = image.key === effectiveCoverKey;
-            return (
-              <ImageTile
-                key={image.key}
-                src={image.previewUrl}
-                alt={image.file.name}
-                isCover={isCover}
-                onSetCover={
-                  images.length > 1 && !isCover ? () => onCoverChange(image.key) : undefined
-                }
-                onRemove={disabled ? undefined : () => handleRemove(image.key)}
-                onMoveLeft={
-                  !disabled && index > 0 ? () => handleMove(image.key, -1) : undefined
-                }
-                onMoveRight={
-                  !disabled && index < images.length - 1 ? () => handleMove(image.key, 1) : undefined
-                }
-              />
-            );
-          })}
+          <ImageTile
+            src={image.previewUrl}
+            alt={image.file.name}
+            isCover={false}
+            onRemove={disabled ? undefined : handleRemove}
+          />
         </ul>
+      )}
+
+      {!disabled && <ImageDropzone onFileSelected={handleFileSelected} hasImage={Boolean(image)} />}
+
+      {error && (
+        <p role="alert" className="text-xs font-medium text-rose-600 dark:text-rose-400">
+          {error}
+        </p>
       )}
     </div>
   );

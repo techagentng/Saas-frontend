@@ -12,7 +12,7 @@ import {
 } from "@/lib/scheduling/duration";
 import { useCreateServiceCategory, useServiceCategories } from "@/modules/service-categories/queries";
 import type { ServiceCategory } from "@/modules/service-categories/types";
-import { listServiceImages, updateServiceImage, uploadServiceImages } from "@/modules/service-images/api";
+import { listServiceImages, uploadServiceImages } from "@/modules/service-images/api";
 import { useServiceSuggestions } from "@/modules/service-suggestions/queries";
 import type { ServiceSuggestion } from "@/modules/service-suggestions/types";
 import { useCreateService } from "@/modules/services/queries";
@@ -46,8 +46,7 @@ function makeDraft(input: {
     categoryKey: input.categoryKey,
     status: "editing",
     error: null,
-    images: [],
-    coverImageKey: null,
+    image: null,
     createdServiceId: null,
     imageUploadStatus: "idle",
     imageUploadError: null,
@@ -59,49 +58,24 @@ function normalize(name: string): string {
 }
 
 /**
- * Uploads one draft's locally-picked files to its now-real service, in the
- * exact visible order — the backend assigns `sort_order` by that array
- * position and, since this is a brand-new service with no images yet, makes
- * the FIRST file in the batch the cover automatically. If the owner had
- * instead chosen a LATER image as cover, that one extra `is_primary` call
- * corrects it after the fact — cheaper than reordering the upload itself,
- * and it keeps the stored order identical to what the owner actually arranged.
+ * Uploads one draft's locally-picked photo to its now-real service. Since
+ * this is a brand-new service with no images yet, the backend makes this
+ * single upload primary automatically.
  *
- * Retry-safe by construction: it first asks the server how many images this
- * service already has and only ever sends the remainder of `draft.images`.
- * This is what makes "retry image upload" safe to call blindly after a
- * PARTIAL failure — e.g. the files themselves uploaded fine but the
- * follow-up cover promotion below is what threw — without a naive retry
- * re-uploading (and duplicating) files the first attempt already stored.
+ * Retry-safe by construction: it first asks the server whether the photo is
+ * already there and skips the upload if so. This is what makes "retry image
+ * upload" safe to call blindly after a PARTIAL failure — e.g. the service
+ * itself was created but the image upload is what threw — without a naive
+ * retry re-uploading (and duplicating) a file the first attempt already
+ * stored.
  */
 async function uploadDraftImages(tenantId: string, serviceId: string, draft: DraftService): Promise<void> {
-  if (draft.images.length === 0) return;
+  if (!draft.image) return;
 
   const alreadyUploaded = await listServiceImages(tenantId, serviceId);
-  const startIndex = alreadyUploaded.length;
-  const remaining = draft.images.slice(startIndex);
+  if (alreadyUploaded.length > 0) return;
 
-  let uploaded: { id: string }[] = [];
-  if (remaining.length > 0) {
-    const response = await uploadServiceImages(
-      tenantId,
-      serviceId,
-      remaining.map((image) => image.file)
-    );
-    uploaded = response.images;
-  }
-
-  const coverKey = draft.coverImageKey ?? draft.images[0]?.key ?? null;
-  const coverIndex = draft.images.findIndex((image) => image.key === coverKey);
-  // Index 0 needs no promotion: it's already primary, either automatically
-  // (the very first image this service ever received) or from a previous
-  // successful call this retry-safety logic is aware of.
-  if (coverIndex > 0 && coverIndex >= startIndex) {
-    const coverUpload = uploaded[coverIndex - startIndex];
-    if (coverUpload) {
-      await updateServiceImage(tenantId, serviceId, coverUpload.id, { is_primary: true });
-    }
-  }
+  await uploadServiceImages(tenantId, serviceId, [draft.image.file]);
 }
 
 const STEP_LABELS: Record<BuilderStep, string> = {
@@ -345,7 +319,7 @@ export function AddServiceBuilder({
       // The service exists now — a failure from here on must never trigger
       // another createService call. `createdServiceId` is what makes that
       // true: it is set once, above, and reused by every retry.
-      if (createdServiceId && draft.images.length > 0) {
+      if (createdServiceId && draft.image) {
         working = working.map((d) =>
           d.key === draft.key ? { ...d, imageUploadStatus: "uploading" } : d
         );

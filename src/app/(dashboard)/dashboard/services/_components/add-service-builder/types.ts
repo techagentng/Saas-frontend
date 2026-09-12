@@ -62,9 +62,8 @@ export type DraftService = {
   categoryKey: string;
   status: DraftStatus;
   error: string | null;
-  images: DraftImage[];
-  /** Null = "no explicit choice" — the first image is the effective cover. */
-  coverImageKey: string | null;
+  /** One photo per service — `null` when none was chosen. */
+  image: DraftImage | null;
   /**
    * Set once this draft's `createService` call succeeds, so a failed image
    * upload can be retried against the real service without ever calling

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,17 +22,19 @@ const imagesResult = {
 };
 
 const uploadMutate = vi.fn();
-const updateMutate = vi.fn();
-const reorderMutate = vi.fn();
 const deleteMutate = vi.fn();
 
 vi.mock("@/modules/service-images/queries", () => ({
   useServiceImages: () => imagesResult,
   useUploadServiceImages: () => ({ mutateAsync: uploadMutate, isPending: false }),
-  useUpdateServiceImage: () => ({ mutateAsync: updateMutate, isPending: false }),
-  useReorderServiceImages: () => ({ mutateAsync: reorderMutate, isPending: false }),
   useDeleteServiceImage: () => ({ mutateAsync: deleteMutate, isPending: false }),
 }));
+
+function makeFile(name: string, type: string, size = 1024): File {
+  const file = new File([new Uint8Array(size)], name, { type });
+  Object.defineProperty(file, "size", { value: size });
+  return file;
+}
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 const SERVICE_ID = "22222222-2222-4222-8222-222222222222";
@@ -43,13 +45,6 @@ const cover: ServiceImage = {
   alt_text: null,
   sort_order: 0,
   is_primary: true,
-};
-const second: ServiceImage = {
-  id: "img-2",
-  url: "https://cdn.example.test/img-2.jpg",
-  alt_text: "Salon interior",
-  sort_order: 1,
-  is_primary: false,
 };
 
 function renderManager(permissions: Permission[], images: ServiceImage[] = []) {
@@ -65,82 +60,83 @@ function renderManager(permissions: Permission[], images: ServiceImage[] = []) {
 beforeEach(() => {
   granted.clear();
   uploadMutate.mockReset().mockResolvedValue(undefined);
-  updateMutate.mockReset().mockResolvedValue(undefined);
-  reorderMutate.mockReset().mockResolvedValue(undefined);
   deleteMutate.mockReset().mockResolvedValue(undefined);
 });
 
-describe("ServiceImageManager — loads existing media", () => {
-  it("renders every existing image with the cover badge on the primary one", () => {
-    renderManager(["service.read", "service.update"], [cover, second]);
+describe("ServiceImageManager — loads the existing image", () => {
+  it("renders the image", () => {
+    renderManager(["service.read", "service.update"], [cover]);
 
     expect(screen.getByAltText("Service image")).toBeInTheDocument();
-    expect(screen.getByAltText("Salon interior")).toBeInTheDocument();
-    expect(screen.getByText("Cover")).toBeInTheDocument();
   });
 
-  it("renders safely with zero images", () => {
+  it("renders safely with no image", () => {
     renderManager(["service.read", "service.update"], []);
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(screen.getByText(/drag & drop service images/i)).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop a photo/i)).toBeInTheDocument();
   });
 });
 
 describe("ServiceImageManager — service.read only (no service.update)", () => {
-  it("shows images but hides every management control", () => {
-    renderManager(["service.read"], [cover, second]);
+  it("shows the image but hides every management control", () => {
+    renderManager(["service.read"], [cover]);
 
-    expect(screen.getByAltText("Salon interior")).toBeInTheDocument();
-    expect(screen.queryByText(/drag & drop service images/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /set as cover/i })).not.toBeInTheDocument();
+    expect(screen.getByAltText("Service image")).toBeInTheDocument();
+    expect(screen.queryByText(/drag & drop a photo/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /remove/i })).not.toBeInTheDocument();
   });
 });
 
-describe("ServiceImageManager — cover and reorder", () => {
-  it("promotes a different image to cover", async () => {
+describe("ServiceImageManager — replace", () => {
+  it("deletes the current image then uploads the new one", async () => {
     const user = userEvent.setup();
-    renderManager(["service.read", "service.update"], [cover, second]);
+    renderManager(["service.read", "service.update"], [cover]);
 
-    await user.click(screen.getByRole("button", { name: /set as cover/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, makeFile("new.jpg", "image/jpeg"));
 
-    expect(updateMutate).toHaveBeenCalledWith({
-      imageId: "img-2",
-      input: { is_primary: true },
-    });
+    expect(deleteMutate).toHaveBeenCalledWith("img-1");
+    expect(uploadMutate).toHaveBeenCalledWith([expect.objectContaining({ name: "new.jpg" })]);
   });
 
-  it("reorders by moving an image later, sending the full permutation", async () => {
+  it("uploads directly when there is no existing image to delete", async () => {
     const user = userEvent.setup();
-    renderManager(["service.read", "service.update"], [cover, second]);
+    renderManager(["service.read", "service.update"], []);
 
-    await user.click(screen.getByRole("button", { name: /move service image later/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, makeFile("new.jpg", "image/jpeg"));
 
-    expect(reorderMutate).toHaveBeenCalledWith(["img-2", "img-1"]);
+    expect(deleteMutate).not.toHaveBeenCalled();
+    expect(uploadMutate).toHaveBeenCalledWith([expect.objectContaining({ name: "new.jpg" })]);
+  });
+
+  it("rejects an unsupported file without deleting the current image", () => {
+    renderManager(["service.read", "service.update"], [cover]);
+
+    // Dropped, not selected via the file picker — the input's `accept`
+    // attribute pre-filters what a real file picker even offers, so a real
+    // way an invalid file still reaches the app is a drag-and-drop.
+    const dropzone = screen.getByText(/drag & drop to replace/i).closest("label") as HTMLElement;
+    fireEvent.drop(dropzone, { dataTransfer: { files: [makeFile("bad.gif", "image/gif")] } });
+
+    expect(screen.getByText(/only jpg, png and webp/i)).toBeInTheDocument();
+    expect(deleteMutate).not.toHaveBeenCalled();
+    expect(uploadMutate).not.toHaveBeenCalled();
   });
 });
 
 describe("ServiceImageManager — delete", () => {
   it("asks for confirmation before deleting, via the existing Dialog primitive", async () => {
     const user = userEvent.setup();
-    renderManager(["service.read", "service.update"], [cover, second]);
+    renderManager(["service.read", "service.update"], [cover]);
 
-    await user.click(screen.getByRole("button", { name: /remove salon interior/i }));
+    await user.click(screen.getByRole("button", { name: /remove service image/i }));
 
     expect(screen.getByRole("dialog", { name: /remove this image/i })).toBeInTheDocument();
     expect(deleteMutate).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: /^remove image$/i }));
-    expect(deleteMutate).toHaveBeenCalledWith("img-2");
-  });
-
-  it("warns that another image becomes the cover when deleting the current cover", async () => {
-    const user = userEvent.setup();
-    renderManager(["service.read", "service.update"], [cover, second]);
-
-    await user.click(screen.getByRole("button", { name: /remove service image/i }));
-
-    expect(screen.getByText(/another remaining image will automatically become/i)).toBeInTheDocument();
+    expect(deleteMutate).toHaveBeenCalledWith("img-1");
   });
 });

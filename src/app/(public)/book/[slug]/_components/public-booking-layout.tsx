@@ -20,12 +20,12 @@ import { BookingVisualPanel } from "./booking-visual-panel";
  */
 export function PublicBookingLayout({
   tenant,
-  previewImage = null,
+  images = [],
   children,
 }: {
   tenant: Pick<PublicTenant, "slug"> | null | undefined;
-  /** A real service photo to feature instead of the decorative default — see `BookingVisualPanel`. */
-  previewImage?: BookingVisualPanelImage | null;
+  /** Real service photos to slide through instead of the decorative default — see `BookingVisualPanel`. */
+  images?: BookingVisualPanelImage[];
   children: ReactNode;
 }) {
   return (
@@ -33,7 +33,7 @@ export function PublicBookingLayout({
       <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 sm:py-8 md:grid-cols-[1.9fr_1fr] md:gap-8 md:py-10 lg:grid-cols-[3fr_2fr] lg:gap-12">
         <BookingVisualPanel
           tenant={tenant}
-          previewImage={previewImage}
+          images={images}
           className="h-40 w-full sm:h-52 md:order-2 md:h-[calc(100vh-5rem)] md:sticky md:top-10 md:self-start"
         />
 
