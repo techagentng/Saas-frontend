@@ -12,6 +12,7 @@ import { useCan } from "@/providers/permissions-provider";
 
 import { BookingStatusBadge } from "./booking-status-badge";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
+import { RescheduleBookingDialog } from "./reschedule-booking-dialog";
 
 /**
  * Booking detail — the dashboard's one existing modal interaction pattern
@@ -37,14 +38,17 @@ export function BookingDetailDialog({
   onClose: () => void;
 }) {
   const bookingQuery = useBooking(tenantId, bookingId);
-  const canCancel = useCan("booking.update");
+  // `booking.update` gates both actions — there is deliberately no
+  // `booking.cancel`/`booking.reschedule` permission (the backend route
+  // comment documents this: both change a booking's state, not a new kind of
+  // action). Only a CONFIRMED booking offers either — the same convention
+  // `ServiceRow`'s `onArchive` uses for an already-archived service.
+  const canManage = useCan("booking.update");
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   const booking = bookingQuery.data;
-  // Cancelling an already-CANCELLED booking is a no-op server-side, so the
-  // control is simply absent there rather than offering an action with no
-  // effect — the same convention `ServiceRow`'s `onArchive` uses.
-  const showCancelAction = canCancel && booking?.status === "CONFIRMED";
+  const showManageActions = canManage && booking?.status === "CONFIRMED";
 
   return (
     <>
@@ -52,14 +56,23 @@ export function BookingDetailDialog({
         title="Booking details"
         onClose={onClose}
         footer={
-          showCancelAction ? (
-            <button
-              type="button"
-              onClick={() => setIsCancelling(true)}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-300 px-4 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-950/40"
-            >
-              Cancel booking
-            </button>
+          showManageActions ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsRescheduling(true)}
+                className="btn-secondary h-10 px-4 text-sm"
+              >
+                Reschedule
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCancelling(true)}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-300 px-4 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-950/40"
+              >
+                Cancel booking
+              </button>
+            </>
           ) : undefined
         }
       >
@@ -93,6 +106,15 @@ export function BookingDetailDialog({
           booking={booking}
           onCancelled={() => setIsCancelling(false)}
           onClose={() => setIsCancelling(false)}
+        />
+      )}
+
+      {isRescheduling && booking && (
+        <RescheduleBookingDialog
+          tenantId={tenantId}
+          booking={booking}
+          onRescheduled={() => setIsRescheduling(false)}
+          onClose={() => setIsRescheduling(false)}
         />
       )}
     </>

@@ -78,3 +78,19 @@ export type BookingListFilter = {
   serviceId?: string | null;
   date?: string | null;
 };
+
+/**
+ * The reschedule request body (Scheduling S12-BE), matching
+ * `rescheduleRequest` field for field
+ * (`internal/scheduling/handler/booking_management_handler.go`). Both values
+ * are interpreted by the backend in the TENANT's own timezone — never a
+ * caller-supplied offset. Deliberately absent: end, duration, service id,
+ * staff id, customer, price — the backend derives or leaves every one of
+ * those unchanged, and has no field to decode them into.
+ */
+export type RescheduleBookingInput = {
+  /** Calendar date, `YYYY-MM-DD`. */
+  date: string;
+  /** Wall-clock start time, `HH:MM` (24-hour) — matches `<input type="time">`'s native value format exactly. */
+  start: string;
+};

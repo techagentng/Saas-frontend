@@ -23,10 +23,12 @@ const bookingResult = {
 
 type MutationStub = { mutateAsync: ReturnType<typeof vi.fn>; isPending: boolean };
 let cancelMutation: MutationStub;
+let rescheduleMutation: MutationStub;
 
 vi.mock("@/modules/bookings/queries", () => ({
   useBooking: () => bookingResult,
   useCancelBooking: () => cancelMutation,
+  useRescheduleBooking: () => rescheduleMutation,
 }));
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
@@ -62,9 +64,16 @@ function renderDialog(booking: TenantBookingDetail | undefined, permissions: Per
   );
 }
 
+const RESCHEDULED: TenantBookingDetail = {
+  ...CONFIRMED,
+  start: "2026-09-27T15:00:00Z",
+  end: "2026-09-27T15:45:00Z",
+};
+
 beforeEach(() => {
   granted.clear();
   cancelMutation = { mutateAsync: vi.fn().mockResolvedValue(CANCELLED), isPending: false };
+  rescheduleMutation = { mutateAsync: vi.fn().mockResolvedValue(RESCHEDULED), isPending: false };
 });
 
 describe("BookingDetailDialog — rendering", () => {
@@ -100,6 +109,50 @@ describe("BookingDetailDialog — cancel permission", () => {
     renderDialog(CANCELLED, ["booking.read", "booking.update"]);
     expect(screen.queryByRole("button", { name: "Cancel booking" })).not.toBeInTheDocument();
     expect(screen.getByText("Cancelled")).toBeInTheDocument();
+  });
+});
+
+describe("BookingDetailDialog — reschedule permission (S12-BE)", () => {
+  it("shows Reschedule for a CONFIRMED booking with booking.update", () => {
+    renderDialog(CONFIRMED, ["booking.read", "booking.update"]);
+    expect(screen.getByRole("button", { name: "Reschedule" })).toBeInTheDocument();
+  });
+
+  it("hides Reschedule for a read-only user (booking.read but no booking.update)", () => {
+    renderDialog(CONFIRMED, ["booking.read"]);
+    expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+  });
+
+  it("hides Reschedule for an already-CANCELLED booking, even with permission", () => {
+    renderDialog(CANCELLED, ["booking.read", "booking.update"]);
+    expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+  });
+
+  it("opens the reschedule dialog showing the current booking", async () => {
+    const user = userEvent.setup();
+    renderDialog(CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Reschedule" }));
+
+    expect(screen.getByRole("dialog", { name: /reschedule appointment/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Choose a new date")).toHaveValue("2026-09-12");
+  });
+
+  it("closes the reschedule dialog after a successful reschedule", async () => {
+    const user = userEvent.setup();
+    renderDialog(CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Reschedule" }));
+    // Confirm is disabled until something actually changes (section 18) —
+    // pick a different date first.
+    await user.clear(screen.getByLabelText("Choose a new date"));
+    await user.type(screen.getByLabelText("Choose a new date"), "2026-09-27");
+    await user.click(screen.getByRole("button", { name: /confirm reschedule/i }));
+
+    expect(rescheduleMutation.mutateAsync).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog", { name: /reschedule appointment/i })).not.toBeInTheDocument();
+    // The underlying detail dialog stays open, showing the still-Confirmed booking.
+    expect(screen.getByRole("dialog", { name: /booking details/i })).toBeInTheDocument();
   });
 });
 

@@ -2,9 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { cancelBooking, getBooking, listBookings } from "@/modules/bookings/api";
+import { cancelBooking, getBooking, listBookings, rescheduleBooking } from "@/modules/bookings/api";
 import { bookingKeys } from "@/modules/bookings/keys";
-import type { BookingListFilter } from "@/modules/bookings/types";
+import type { BookingListFilter, RescheduleBookingInput } from "@/modules/bookings/types";
 import { useAuth } from "@/providers/auth-provider";
 
 /**
@@ -59,6 +59,39 @@ export function useCancelBooking(tenantId: string) {
     onSuccess: (updated) => {
       queryClient.setQueryData(bookingKeys.detail(tenantId, updated.id), updated);
       queryClient.invalidateQueries({ queryKey: bookingKeys.tenant(tenantId) });
+    },
+  });
+}
+
+/**
+ * Reschedules one booking to a new date/start (Scheduling S12-BE). Same
+ * cache-update shape as `useCancelBooking` — trust the server-confirmed
+ * response rather than move the appointment optimistically, and invalidate
+ * every list for this tenant since the new time may move the booking between
+ * views (e.g. a same-day Upcoming list filtered by `date`).
+ *
+ * `onError` ALSO invalidates the detail query (not just on success): a
+ * reschedule can fail specifically *because* the booking changed underneath
+ * the dialog (someone else cancelled it in the meantime — see
+ * `RescheduleBookingDialog`'s own doc comment), and refetching lets the
+ * now-stale "Confirmed" state self-correct to whatever is actually current
+ * rather than leaving a dialog open against data that was never true anymore.
+ * A refetch after an ordinary validation error (e.g. a malformed time) is
+ * harmless — the booking didn't change, so it refetches to the same values.
+ */
+export function useRescheduleBooking(tenantId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bookingId, input }: { bookingId: string; input: RescheduleBookingInput }) =>
+      rescheduleBooking(tenantId, bookingId, input),
+    retry: false,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(bookingKeys.detail(tenantId, updated.id), updated);
+      queryClient.invalidateQueries({ queryKey: bookingKeys.tenant(tenantId) });
+    },
+    onError: (_error, variables) => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(tenantId, variables.bookingId) });
     },
   });
 }

@@ -7,7 +7,7 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 // Imported after the mock is declared.
-import { cancelBooking, getBooking, listBookings } from "./api";
+import { cancelBooking, getBooking, listBookings, rescheduleBooking } from "./api";
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -92,5 +92,24 @@ describe("cancelBooking", () => {
       undefined,
       { signal: undefined }
     );
+  });
+});
+
+describe("rescheduleBooking", () => {
+  it("POSTs to the exact S12-BE endpoint with {date, start} only", async () => {
+    await rescheduleBooking(TENANT_ID, "booking-1", { date: "2026-09-27", start: "16:00" });
+
+    expect(post).toHaveBeenCalledWith(
+      `/v1/tenants/${TENANT_ID}/bookings/booking-1/reschedule`,
+      { date: "2026-09-27", start: "16:00" },
+      { signal: undefined }
+    );
+  });
+
+  it("never sends end, duration, service id, staff id, customer or price", async () => {
+    await rescheduleBooking(TENANT_ID, "booking-1", { date: "2026-09-27", start: "16:00" });
+
+    const [, body] = post.mock.calls[0] as [string, Record<string, unknown>];
+    expect(Object.keys(body).sort()).toEqual(["date", "start"]);
   });
 });

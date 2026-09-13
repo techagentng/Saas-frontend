@@ -6,10 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const listBookings = vi.fn();
 const getBooking = vi.fn();
 const cancelBooking = vi.fn();
+const rescheduleBooking = vi.fn();
 vi.mock("./api", () => ({
   listBookings: (...args: unknown[]) => listBookings(...args),
   getBooking: (...args: unknown[]) => getBooking(...args),
   cancelBooking: (...args: unknown[]) => cancelBooking(...args),
+  rescheduleBooking: (...args: unknown[]) => rescheduleBooking(...args),
 }));
 
 vi.mock("@/providers/auth-provider", () => ({
@@ -17,7 +19,7 @@ vi.mock("@/providers/auth-provider", () => ({
 }));
 
 // Imported after the mocks are declared.
-import { useBooking, useBookings, useCancelBooking } from "./queries";
+import { useBooking, useBookings, useCancelBooking, useRescheduleBooking } from "./queries";
 import { bookingKeys } from "./keys";
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
@@ -38,6 +40,12 @@ const BOOKING = {
 };
 
 const CANCELLED_BOOKING = { ...BOOKING, status: "CANCELLED" as const, timezone: "Africa/Lagos" };
+const RESCHEDULED_BOOKING = {
+  ...BOOKING,
+  start: "2026-09-27T15:00:00Z",
+  end: "2026-09-27T15:45:00Z",
+  timezone: "Africa/Lagos",
+};
 
 let queryClient: QueryClient;
 
@@ -49,6 +57,7 @@ beforeEach(() => {
   listBookings.mockReset().mockResolvedValue([BOOKING]);
   getBooking.mockReset().mockResolvedValue({ ...BOOKING, timezone: "Africa/Lagos" });
   cancelBooking.mockReset().mockResolvedValue(CANCELLED_BOOKING);
+  rescheduleBooking.mockReset().mockResolvedValue(RESCHEDULED_BOOKING);
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 });
 
@@ -140,5 +149,63 @@ describe("useCancelBooking", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(cancelBooking).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useRescheduleBooking", () => {
+  it("POSTs through rescheduleBooking(tenantId, bookingId, input)", async () => {
+    const { result } = renderHook(() => useRescheduleBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate({ bookingId: "booking-1", input: { date: "2026-09-27", start: "16:00" } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(rescheduleBooking).toHaveBeenCalledWith(TENANT_ID, "booking-1", {
+      date: "2026-09-27",
+      start: "16:00",
+    });
+  });
+
+  it("writes the server-confirmed detail into the cache on success, preserving id/reference", async () => {
+    const { result } = renderHook(() => useRescheduleBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate({ bookingId: "booking-1", input: { date: "2026-09-27", start: "16:00" } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const cached = queryClient.getQueryData(bookingKeys.detail(TENANT_ID, "booking-1"));
+    expect(cached).toEqual(RESCHEDULED_BOOKING);
+    expect((cached as typeof RESCHEDULED_BOOKING).id).toBe("booking-1");
+    expect((cached as typeof RESCHEDULED_BOOKING).reference).toBe(BOOKING.reference);
+  });
+
+  it("invalidates every list/detail query for this tenant on success", async () => {
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useRescheduleBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate({ bookingId: "booking-1", input: { date: "2026-09-27", start: "16:00" } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: bookingKeys.tenant(TENANT_ID) });
+  });
+
+  it("on failure, invalidates only this booking's detail (self-healing a possibly-stale dialog), never the whole app", async () => {
+    rescheduleBooking.mockRejectedValue(new Error("conflict"));
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useRescheduleBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate({ bookingId: "booking-1", input: { date: "2026-09-27", start: "16:00" } });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: bookingKeys.detail(TENANT_ID, "booking-1") });
+  });
+
+  it("does not retry a failed reschedule", async () => {
+    rescheduleBooking.mockRejectedValue(new Error("network down"));
+    const { result } = renderHook(() => useRescheduleBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate({ bookingId: "booking-1", input: { date: "2026-09-27", start: "16:00" } });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(rescheduleBooking).toHaveBeenCalledTimes(1);
   });
 });

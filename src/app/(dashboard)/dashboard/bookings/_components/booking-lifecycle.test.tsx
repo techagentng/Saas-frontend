@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/lib/api/errors";
 import { resolveVerticalExperience } from "@/lib/vertical/experience";
 import type { TenantBooking, TenantBookingDetail } from "@/modules/bookings/types";
 import type { Permission } from "@/types/permission";
@@ -49,10 +50,12 @@ vi.mock("@/modules/services/queries", () => ({
 const listBookings = vi.fn();
 const getBooking = vi.fn();
 const cancelBooking = vi.fn();
+const rescheduleBooking = vi.fn();
 vi.mock("@/modules/bookings/api", () => ({
   listBookings: (...args: unknown[]) => listBookings(...args),
   getBooking: (...args: unknown[]) => getBooking(...args),
   cancelBooking: (...args: unknown[]) => cancelBooking(...args),
+  rescheduleBooking: (...args: unknown[]) => rescheduleBooking(...args),
 }));
 
 const TENANT_A = "11111111-1111-4111-8111-111111111111";
@@ -126,6 +129,18 @@ beforeEach(() => {
     booking.status = "CANCELLED";
     return Promise.resolve(toDetail(booking));
   });
+
+  rescheduleBooking.mockImplementation(
+    (tenantId: string, bookingId: string, input: { date: string; start: string }) => {
+      const booking = server[tenantId];
+      if (!booking || booking.id !== bookingId) return Promise.reject(new Error("not found"));
+      const start = new Date(`${input.date}T${input.start}:00Z`);
+      const durationMs = booking.duration_minutes * 60 * 1000;
+      booking.start = start.toISOString();
+      booking.end = new Date(start.getTime() + durationMs).toISOString();
+      return Promise.resolve(toDetail(booking));
+    }
+  );
 });
 
 function renderTenant(tenantId: string) {
@@ -176,6 +191,69 @@ describe("S11 lifecycle — Upcoming → cancel → Cancelled", () => {
   });
 });
 
+describe("S12-BE lifecycle — reschedule", () => {
+  it("moves the booking to the new date/time, preserving id and reference, and closes the reschedule dialog", async () => {
+    const user = userEvent.setup();
+    renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    await screen.findByRole("dialog", { name: /booking details/i });
+
+    await user.click(screen.getByRole("button", { name: "Reschedule" }));
+    const rescheduleDialog = await screen.findByRole("dialog", { name: /reschedule appointment/i });
+    await user.clear(within(rescheduleDialog).getByLabelText("Choose a new date"));
+    await user.type(within(rescheduleDialog).getByLabelText("Choose a new date"), "2099-02-01");
+    await user.click(within(rescheduleDialog).getByRole("button", { name: /confirm reschedule/i }));
+
+    await waitFor(() =>
+      expect(rescheduleBooking).toHaveBeenCalledWith(TENANT_A, "booking-a", {
+        date: "2099-02-01",
+        start: "10:00",
+      })
+    );
+    // The reschedule dialog closed; the detail dialog (same booking id/reference) remains.
+    expect(screen.queryByRole("dialog", { name: /reschedule appointment/i })).not.toBeInTheDocument();
+    const detailDialog = screen.getByRole("dialog", { name: /booking details/i });
+    expect(within(detailDialog).getByText("NB-AAAA1111")).toBeInTheDocument();
+  });
+
+  it("409 conflict: keeps the booking unchanged, shows a clear inline error, and lets the user pick another time", async () => {
+    rescheduleBooking.mockRejectedValueOnce(
+      new ApiError(409, { code: "BOOKING_SLOT_UNAVAILABLE", message: "slot gone" })
+    );
+    const user = userEvent.setup();
+    const originalStart = server[TENANT_A].start;
+    renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    await user.click(screen.getByRole("button", { name: "Reschedule" }));
+    const rescheduleDialog = await screen.findByRole("dialog", { name: /reschedule appointment/i });
+
+    await user.clear(within(rescheduleDialog).getByLabelText("Choose a new date"));
+    await user.type(within(rescheduleDialog).getByLabelText("Choose a new date"), "2099-02-01");
+    await user.click(within(rescheduleDialog).getByRole("button", { name: /confirm reschedule/i }));
+
+    // The booking is unchanged (still its original start) — the server call rejected.
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no longer available/i);
+    expect(server[TENANT_A].start).toBe(originalStart);
+
+    // The dialog is still open and usable — pick another time and it succeeds.
+    await user.clear(within(rescheduleDialog).getByLabelText("Choose a new date"));
+    await user.type(within(rescheduleDialog).getByLabelText("Choose a new date"), "2099-03-01");
+    await user.click(within(rescheduleDialog).getByRole("button", { name: /confirm reschedule/i }));
+
+    await waitFor(() =>
+      expect(rescheduleBooking).toHaveBeenLastCalledWith(TENANT_A, "booking-a", {
+        date: "2099-03-01",
+        start: "10:00",
+      })
+    );
+    expect(screen.queryByRole("dialog", { name: /reschedule appointment/i })).not.toBeInTheDocument();
+  });
+});
+
 describe("S11 lifecycle — tenant switch clears stale data", () => {
   it("shows Tenant A's booking, then only Tenant B's after switching, never both", async () => {
     const { rerender } = renderTenant(TENANT_A);
@@ -221,5 +299,29 @@ describe("S11 lifecycle — tenant switch clears stale data", () => {
         expect.anything()
       )
     );
+  });
+
+  it("closes a stale open reschedule dialog rather than showing Tenant A's booking under Tenant B", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    await user.click(screen.getByRole("button", { name: "Reschedule" }));
+    expect(await screen.findByRole("dialog", { name: /reschedule appointment/i })).toBeInTheDocument();
+
+    // Remount for Tenant B in the SAME tree (rerender, not a second render),
+    // exactly as BookingsPage's key={tenantId} does — this is what actually
+    // unmounts Tenant A's subtree (and its portaled dialogs) rather than
+    // leaving it mounted alongside Tenant B's.
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <BookingList key={TENANT_B} tenantId={TENANT_B} timezone="Africa/Lagos" />
+      </QueryClientProvider>
+    );
+
+    expect(screen.queryByRole("dialog", { name: /reschedule appointment/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /booking details/i })).not.toBeInTheDocument();
+    await screen.findByText("Sam Customer");
   });
 });

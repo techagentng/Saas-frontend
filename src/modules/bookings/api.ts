@@ -1,5 +1,10 @@
 import { apiClient } from "@/lib/api/client";
-import type { BookingListFilter, TenantBooking, TenantBookingDetail } from "@/modules/bookings/types";
+import type {
+  BookingListFilter,
+  RescheduleBookingInput,
+  TenantBooking,
+  TenantBookingDetail,
+} from "@/modules/bookings/types";
 
 /**
  * Raw calls against the Scheduling S11 owner booking-management endpoints.
@@ -61,6 +66,32 @@ export function cancelBooking(
   return apiClient.post<TenantBookingDetail>(
     `/v1/tenants/${tenantId}/bookings/${bookingId}/cancel`,
     undefined,
+    { signal }
+  );
+}
+
+/**
+ * POST /api/v1/tenants/{tenantID}/bookings/{bookingID}/reschedule — `booking.update`.
+ *
+ * Body: `{date, start}`, both interpreted by the backend in the TENANT's own
+ * timezone (never the caller's/browser's). The backend re-validates the new
+ * time through the real S7 availability engine — with this booking's own
+ * current interval excluded so it never conflicts with itself — so this
+ * function never computes or previews availability itself; a request either
+ * succeeds (new booking-detail DTO) or fails with a real error (most notably
+ * `BOOKING_SLOT_UNAVAILABLE`, a 409, if the slot is no longer free).
+ * Rescheduling to the booking's own current slot is a no-op success, per the
+ * backend's own idempotency convention.
+ */
+export function rescheduleBooking(
+  tenantId: string,
+  bookingId: string,
+  input: RescheduleBookingInput,
+  signal?: AbortSignal
+): Promise<TenantBookingDetail> {
+  return apiClient.post<TenantBookingDetail>(
+    `/v1/tenants/${tenantId}/bookings/${bookingId}/reschedule`,
+    input,
     { signal }
   );
 }
