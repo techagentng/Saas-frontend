@@ -2,9 +2,16 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { cancelBooking, getBooking, listBookings, rescheduleBooking } from "@/modules/bookings/api";
+import {
+  cancelBooking,
+  completeBooking,
+  getBooking,
+  listBookings,
+  markBookingNoShow,
+  rescheduleBooking,
+} from "@/modules/bookings/api";
 import { bookingKeys } from "@/modules/bookings/keys";
-import type { BookingListFilter, RescheduleBookingInput } from "@/modules/bookings/types";
+import type { BookingListFilter, RescheduleBookingInput, TenantBookingDetail } from "@/modules/bookings/types";
 import { useAuth } from "@/providers/auth-provider";
 
 /**
@@ -94,4 +101,44 @@ export function useRescheduleBooking(tenantId: string) {
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(tenantId, variables.bookingId) });
     },
   });
+}
+
+/**
+ * Shared shape behind `useCompleteBooking`/`useMarkBookingNoShow` (Scheduling
+ * S13-BE) — the two are byte-for-byte identical apart from which endpoint
+ * they call, mirroring how `Complete`/`MarkNoShow` are themselves both just
+ * `transitionToTerminal` with a different target status on the backend.
+ *
+ * The `onError` invalidation exists specifically for the race the task calls
+ * out: Owner A has the booking open as CONFIRMED; Owner B marks it COMPLETED;
+ * Owner A clicks "Mark no-show" and the backend rejects with
+ * `BOOKING_INVALID_TRANSITION`. Invalidating this booking's detail lets Owner
+ * A's still-open dialog refetch and show the real current state (COMPLETED,
+ * with no further actions) instead of staying stuck showing a stale
+ * CONFIRMED booking with actions that will only ever fail again.
+ */
+function useTerminalStatusMutation(tenantId: string, mutationFn: (bookingId: string) => Promise<TenantBookingDetail>) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn,
+    retry: false,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(bookingKeys.detail(tenantId, updated.id), updated);
+      queryClient.invalidateQueries({ queryKey: bookingKeys.tenant(tenantId) });
+    },
+    onError: (_error, bookingId) => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(tenantId, bookingId) });
+    },
+  });
+}
+
+/** Marks a CONFIRMED, already-ended booking COMPLETED (Scheduling S13-BE). See `useTerminalStatusMutation`. */
+export function useCompleteBooking(tenantId: string) {
+  return useTerminalStatusMutation(tenantId, (bookingId) => completeBooking(tenantId, bookingId));
+}
+
+/** Marks a CONFIRMED, already-ended booking NO_SHOW (Scheduling S13-BE). See `useTerminalStatusMutation`. */
+export function useMarkBookingNoShow(tenantId: string) {
+  return useTerminalStatusMutation(tenantId, (bookingId) => markBookingNoShow(tenantId, bookingId));
 }

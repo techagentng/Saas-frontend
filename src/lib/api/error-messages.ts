@@ -46,6 +46,11 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
 
   // Scheduling S11/S12 bookings
   BOOKING_NOT_FOUND: "That booking no longer exists. Refresh to see the current list.",
+  // Scheduling S13-BE — deliberately generic: this fires for several distinct
+  // domain rules (not yet CONFIRMED, too early, already a different terminal
+  // status), and a screen with more context (e.g. the outcome dialogs) should
+  // override it with copy specific to what it just attempted.
+  BOOKING_INVALID_TRANSITION: "This booking's status has changed. Refresh to see its current state.",
 
   // Request shape
   INVALID_REQUEST: "Something in that request wasn't right. Please check and try again.",

@@ -5,13 +5,14 @@ import { useState } from "react";
 import { Dialog } from "@/components/ui/Dialog";
 import { apiErrorMessage } from "@/lib/api/error-messages";
 import { formatDuration } from "@/lib/scheduling/duration";
-import { formatBookingInstant } from "@/modules/bookings/format";
+import { formatBookingInstant, hasBookingEnded } from "@/modules/bookings/format";
 import { useBooking } from "@/modules/bookings/queries";
 import type { TenantBookingDetail } from "@/modules/bookings/types";
 import { useCan } from "@/providers/permissions-provider";
 
 import { BookingStatusBadge } from "./booking-status-badge";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
+import { MarkBookingOutcomeDialog } from "./mark-booking-outcome-dialog";
 import { RescheduleBookingDialog } from "./reschedule-booking-dialog";
 
 /**
@@ -46,9 +47,14 @@ export function BookingDetailDialog({
   const canManage = useCan("booking.update");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const [outcomeDialog, setOutcomeDialog] = useState<"COMPLETED" | "NO_SHOW" | null>(null);
 
   const booking = bookingQuery.data;
   const showManageActions = canManage && booking?.status === "CONFIRMED";
+  // Scheduling S13-BE: only once the appointment has actually ended — a
+  // UX-only hint (see `hasBookingEnded`'s own doc comment); the backend
+  // re-validates independently and remains the final authority regardless.
+  const showLifecycleActions = showManageActions && booking !== undefined && hasBookingEnded(booking.end);
 
   return (
     <>
@@ -58,6 +64,24 @@ export function BookingDetailDialog({
         footer={
           showManageActions ? (
             <>
+              {showLifecycleActions && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setOutcomeDialog("COMPLETED")}
+                    className="btn-secondary h-10 px-4 text-sm"
+                  >
+                    Mark completed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOutcomeDialog("NO_SHOW")}
+                    className="btn-secondary h-10 px-4 text-sm"
+                  >
+                    Mark no-show
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => setIsRescheduling(true)}
@@ -115,6 +139,16 @@ export function BookingDetailDialog({
           booking={booking}
           onRescheduled={() => setIsRescheduling(false)}
           onClose={() => setIsRescheduling(false)}
+        />
+      )}
+
+      {outcomeDialog && booking && (
+        <MarkBookingOutcomeDialog
+          outcome={outcomeDialog}
+          tenantId={tenantId}
+          booking={booking}
+          onUpdated={() => setOutcomeDialog(null)}
+          onClose={() => setOutcomeDialog(null)}
         />
       )}
     </>

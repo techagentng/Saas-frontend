@@ -7,11 +7,15 @@ const listBookings = vi.fn();
 const getBooking = vi.fn();
 const cancelBooking = vi.fn();
 const rescheduleBooking = vi.fn();
+const completeBooking = vi.fn();
+const markBookingNoShow = vi.fn();
 vi.mock("./api", () => ({
   listBookings: (...args: unknown[]) => listBookings(...args),
   getBooking: (...args: unknown[]) => getBooking(...args),
   cancelBooking: (...args: unknown[]) => cancelBooking(...args),
   rescheduleBooking: (...args: unknown[]) => rescheduleBooking(...args),
+  completeBooking: (...args: unknown[]) => completeBooking(...args),
+  markBookingNoShow: (...args: unknown[]) => markBookingNoShow(...args),
 }));
 
 vi.mock("@/providers/auth-provider", () => ({
@@ -19,7 +23,14 @@ vi.mock("@/providers/auth-provider", () => ({
 }));
 
 // Imported after the mocks are declared.
-import { useBooking, useBookings, useCancelBooking, useRescheduleBooking } from "./queries";
+import {
+  useBooking,
+  useBookings,
+  useCancelBooking,
+  useCompleteBooking,
+  useMarkBookingNoShow,
+  useRescheduleBooking,
+} from "./queries";
 import { bookingKeys } from "./keys";
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
@@ -46,6 +57,8 @@ const RESCHEDULED_BOOKING = {
   end: "2026-09-27T15:45:00Z",
   timezone: "Africa/Lagos",
 };
+const COMPLETED_BOOKING = { ...BOOKING, status: "COMPLETED" as const, timezone: "Africa/Lagos" };
+const NO_SHOW_BOOKING = { ...BOOKING, status: "NO_SHOW" as const, timezone: "Africa/Lagos" };
 
 let queryClient: QueryClient;
 
@@ -58,6 +71,8 @@ beforeEach(() => {
   getBooking.mockReset().mockResolvedValue({ ...BOOKING, timezone: "Africa/Lagos" });
   cancelBooking.mockReset().mockResolvedValue(CANCELLED_BOOKING);
   rescheduleBooking.mockReset().mockResolvedValue(RESCHEDULED_BOOKING);
+  completeBooking.mockReset().mockResolvedValue(COMPLETED_BOOKING);
+  markBookingNoShow.mockReset().mockResolvedValue(NO_SHOW_BOOKING);
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 });
 
@@ -207,5 +222,108 @@ describe("useRescheduleBooking", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(rescheduleBooking).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useCompleteBooking", () => {
+  it("POSTs through completeBooking(tenantId, bookingId)", async () => {
+    const { result } = renderHook(() => useCompleteBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(completeBooking).toHaveBeenCalledWith(TENANT_ID, "booking-1");
+  });
+
+  it("writes the server-confirmed COMPLETED detail into the cache on success", async () => {
+    const { result } = renderHook(() => useCompleteBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(queryClient.getQueryData(bookingKeys.detail(TENANT_ID, "booking-1"))).toEqual(COMPLETED_BOOKING);
+  });
+
+  it("invalidates every list/detail query for this tenant on success", async () => {
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useCompleteBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: bookingKeys.tenant(TENANT_ID) });
+  });
+
+  it("on a stale-transition conflict, invalidates this booking's detail so a stale dialog can self-correct", async () => {
+    completeBooking.mockRejectedValue(new Error("BOOKING_INVALID_TRANSITION"));
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useCompleteBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: bookingKeys.detail(TENANT_ID, "booking-1") });
+  });
+
+  it("does not retry a failed completion", async () => {
+    completeBooking.mockRejectedValue(new Error("network down"));
+    const { result } = renderHook(() => useCompleteBooking(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(completeBooking).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useMarkBookingNoShow", () => {
+  it("POSTs through markBookingNoShow(tenantId, bookingId)", async () => {
+    const { result } = renderHook(() => useMarkBookingNoShow(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(markBookingNoShow).toHaveBeenCalledWith(TENANT_ID, "booking-1");
+  });
+
+  it("writes the server-confirmed NO_SHOW detail into the cache on success", async () => {
+    const { result } = renderHook(() => useMarkBookingNoShow(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(queryClient.getQueryData(bookingKeys.detail(TENANT_ID, "booking-1"))).toEqual(NO_SHOW_BOOKING);
+  });
+
+  it("invalidates every list/detail query for this tenant on success", async () => {
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useMarkBookingNoShow(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: bookingKeys.tenant(TENANT_ID) });
+  });
+
+  it("on a stale-transition conflict, invalidates this booking's detail", async () => {
+    markBookingNoShow.mockRejectedValue(new Error("BOOKING_INVALID_TRANSITION"));
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useMarkBookingNoShow(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: bookingKeys.detail(TENANT_ID, "booking-1") });
+  });
+
+  it("does not retry a failed no-show mark", async () => {
+    markBookingNoShow.mockRejectedValue(new Error("network down"));
+    const { result } = renderHook(() => useMarkBookingNoShow(TENANT_ID), { wrapper });
+
+    result.current.mutate("booking-1");
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(markBookingNoShow).toHaveBeenCalledTimes(1);
   });
 });

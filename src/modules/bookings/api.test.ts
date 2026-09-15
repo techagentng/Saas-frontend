@@ -7,7 +7,7 @@ vi.mock("@/lib/api/client", () => ({
 }));
 
 // Imported after the mock is declared.
-import { cancelBooking, getBooking, listBookings, rescheduleBooking } from "./api";
+import { cancelBooking, completeBooking, getBooking, listBookings, markBookingNoShow, rescheduleBooking } from "./api";
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -111,5 +111,29 @@ describe("rescheduleBooking", () => {
 
     const [, body] = post.mock.calls[0] as [string, Record<string, unknown>];
     expect(Object.keys(body).sort()).toEqual(["date", "start"]);
+  });
+});
+
+describe("completeBooking", () => {
+  it("POSTs to the exact S13-BE complete endpoint with no request body", async () => {
+    await completeBooking(TENANT_ID, "booking-1");
+
+    expect(post).toHaveBeenCalledWith(
+      `/v1/tenants/${TENANT_ID}/bookings/booking-1/complete`,
+      undefined,
+      { signal: undefined }
+    );
+  });
+});
+
+describe("markBookingNoShow", () => {
+  it("POSTs to the exact S13-BE no-show endpoint with no request body", async () => {
+    await markBookingNoShow(TENANT_ID, "booking-1");
+
+    expect(post).toHaveBeenCalledWith(
+      `/v1/tenants/${TENANT_ID}/bookings/booking-1/no-show`,
+      undefined,
+      { signal: undefined }
+    );
   });
 });

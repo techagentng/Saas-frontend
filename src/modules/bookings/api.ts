@@ -95,3 +95,45 @@ export function rescheduleBooking(
     { signal }
   );
 }
+
+/**
+ * POST /api/v1/tenants/{tenantID}/bookings/{bookingID}/complete — `booking.update`.
+ *
+ * No request body: completion is a server-decided state transition
+ * (CONFIRMED → COMPLETED), the same shape `cancelBooking` uses. Only allowed
+ * once the appointment's window has ended; a CONFIRMED booking that hasn't
+ * ended yet, or any non-CONFIRMED booking that isn't already COMPLETED, is
+ * rejected with `BOOKING_INVALID_TRANSITION` (409). Completing an
+ * already-COMPLETED booking is idempotent success.
+ */
+export function completeBooking(
+  tenantId: string,
+  bookingId: string,
+  signal?: AbortSignal
+): Promise<TenantBookingDetail> {
+  return apiClient.post<TenantBookingDetail>(
+    `/v1/tenants/${tenantId}/bookings/${bookingId}/complete`,
+    undefined,
+    { signal }
+  );
+}
+
+/**
+ * POST /api/v1/tenants/{tenantID}/bookings/{bookingID}/no-show — `booking.update`.
+ *
+ * Mirrors `completeBooking` exactly, with NO_SHOW as the target status: same
+ * empty body, same appointment-must-have-ended eligibility rule, same
+ * `BOOKING_INVALID_TRANSITION` rejection, same idempotency on an
+ * already-NO_SHOW booking.
+ */
+export function markBookingNoShow(
+  tenantId: string,
+  bookingId: string,
+  signal?: AbortSignal
+): Promise<TenantBookingDetail> {
+  return apiClient.post<TenantBookingDetail>(
+    `/v1/tenants/${tenantId}/bookings/${bookingId}/no-show`,
+    undefined,
+    { signal }
+  );
+}

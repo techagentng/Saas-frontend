@@ -51,11 +51,15 @@ const listBookings = vi.fn();
 const getBooking = vi.fn();
 const cancelBooking = vi.fn();
 const rescheduleBooking = vi.fn();
+const completeBooking = vi.fn();
+const markBookingNoShow = vi.fn();
 vi.mock("@/modules/bookings/api", () => ({
   listBookings: (...args: unknown[]) => listBookings(...args),
   getBooking: (...args: unknown[]) => getBooking(...args),
   cancelBooking: (...args: unknown[]) => cancelBooking(...args),
   rescheduleBooking: (...args: unknown[]) => rescheduleBooking(...args),
+  completeBooking: (...args: unknown[]) => completeBooking(...args),
+  markBookingNoShow: (...args: unknown[]) => markBookingNoShow(...args),
 }));
 
 const TENANT_A = "11111111-1111-4111-8111-111111111111";
@@ -109,11 +113,25 @@ beforeEach(() => {
   server = makeServerState();
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 
+  // Reset call history for every mock, not just its implementation — several
+  // tests below assert exact call counts (e.g. "duplicate submission
+  // prevented"), which would otherwise accumulate across tests sharing these
+  // same `vi.fn()` instances.
+  listBookings.mockReset();
+  getBooking.mockReset();
+  cancelBooking.mockReset();
+  rescheduleBooking.mockReset();
+  completeBooking.mockReset();
+  markBookingNoShow.mockReset();
+
   listBookings.mockImplementation((tenantId: string, filter: { view: string }) => {
     const booking = server[tenantId];
     if (!booking) return Promise.resolve([]);
     if (filter.view === "UPCOMING") return Promise.resolve(booking.status === "CONFIRMED" ? [booking] : []);
     if (filter.view === "CANCELLED") return Promise.resolve(booking.status === "CANCELLED" ? [booking] : []);
+    // S13-BE: PAST includes CONFIRMED/COMPLETED/NO_SHOW, excludes CANCELLED
+    // (its own dedicated view) — mirroring toRepoFilter's real semantics.
+    if (filter.view === "PAST") return Promise.resolve(booking.status !== "CANCELLED" ? [booking] : []);
     return Promise.resolve([booking]);
   });
 
@@ -141,6 +159,26 @@ beforeEach(() => {
       return Promise.resolve(toDetail(booking));
     }
   );
+
+  completeBooking.mockImplementation((tenantId: string, bookingId: string) => {
+    const booking = server[tenantId];
+    if (!booking || booking.id !== bookingId) return Promise.reject(new Error("not found"));
+    if (booking.status !== "CONFIRMED" && booking.status !== "COMPLETED") {
+      return Promise.reject(new ApiError(409, { code: "BOOKING_INVALID_TRANSITION", message: "no" }));
+    }
+    booking.status = "COMPLETED";
+    return Promise.resolve(toDetail(booking));
+  });
+
+  markBookingNoShow.mockImplementation((tenantId: string, bookingId: string) => {
+    const booking = server[tenantId];
+    if (!booking || booking.id !== bookingId) return Promise.reject(new Error("not found"));
+    if (booking.status !== "CONFIRMED" && booking.status !== "NO_SHOW") {
+      return Promise.reject(new ApiError(409, { code: "BOOKING_INVALID_TRANSITION", message: "no" }));
+    }
+    booking.status = "NO_SHOW";
+    return Promise.resolve(toDetail(booking));
+  });
 });
 
 function renderTenant(tenantId: string) {
@@ -251,6 +289,134 @@ describe("S12-BE lifecycle — reschedule", () => {
       })
     );
     expect(screen.queryByRole("dialog", { name: /reschedule appointment/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("S13-BE lifecycle — Complete", () => {
+  it("CONFIRMED → Mark completed → confirm → COMPLETED shown → actions removed → moves out of Upcoming into Past", async () => {
+    const user = userEvent.setup();
+    // An eligible booking: CONFIRMED and already ended.
+    server[TENANT_A].start = "2020-01-01T09:00:00Z";
+    server[TENANT_A].end = "2020-01-01T09:45:00Z";
+    renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    const dialog = await screen.findByRole("dialog", { name: /booking details/i });
+
+    await user.click(within(dialog).getByRole("button", { name: "Mark completed" }));
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+
+    await waitFor(() => expect(completeBooking).toHaveBeenCalledWith(TENANT_A, "booking-a"));
+    await waitFor(() => expect(within(dialog).getByText("Completed")).toBeInTheDocument());
+    // Terminal — every action button is gone.
+    expect(within(dialog).queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Cancel booking" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /close booking details/i }));
+
+    // Gone from Upcoming (no longer CONFIRMED)...
+    await waitFor(() => expect(screen.queryByText("Jane Doe")).not.toBeInTheDocument());
+    // ...and present in Past, per the backend's own S13-BE grouping (never
+    // recreated client-side — this is just the refetch after invalidation).
+    await user.click(screen.getByRole("tab", { name: "Past" }));
+    const row = (await screen.findByRole("button", { name: /view booking details for jane doe/i })).closest("li")!;
+    expect(within(row).getByText("Completed")).toBeInTheDocument();
+  });
+
+  it("failure preserves CONFIRMED and the booking stays in Upcoming", async () => {
+    completeBooking.mockRejectedValueOnce(new Error("network down"));
+    const user = userEvent.setup();
+    server[TENANT_A].start = "2020-01-01T09:00:00Z";
+    server[TENANT_A].end = "2020-01-01T09:45:00Z";
+    renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    const dialog = await screen.findByRole("dialog", { name: /booking details/i });
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(within(dialog).getByText("Confirmed")).toBeInTheDocument();
+    expect(server[TENANT_A].status).toBe("CONFIRMED");
+  });
+});
+
+describe("S13-BE lifecycle — No-show", () => {
+  it("CONFIRMED → Mark no-show → confirm → NO_SHOW shown → actions removed", async () => {
+    const user = userEvent.setup();
+    server[TENANT_A].start = "2020-01-01T09:00:00Z";
+    server[TENANT_A].end = "2020-01-01T09:45:00Z";
+    renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    const dialog = await screen.findByRole("dialog", { name: /booking details/i });
+
+    await user.click(within(dialog).getByRole("button", { name: "Mark no-show" }));
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+
+    await waitFor(() => expect(markBookingNoShow).toHaveBeenCalledWith(TENANT_A, "booking-a"));
+    await waitFor(() => expect(within(dialog).getByText("No-show")).toBeInTheDocument());
+    expect(within(dialog).queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+  });
+
+  it("failure preserves CONFIRMED", async () => {
+    markBookingNoShow.mockRejectedValueOnce(new Error("network down"));
+    const user = userEvent.setup();
+    server[TENANT_A].start = "2020-01-01T09:00:00Z";
+    server[TENANT_A].end = "2020-01-01T09:45:00Z";
+    renderTenant(TENANT_A);
+
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    const dialog = await screen.findByRole("dialog", { name: /booking details/i });
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(within(dialog).getByText("Confirmed")).toBeInTheDocument();
+    expect(server[TENANT_A].status).toBe("CONFIRMED");
+  });
+});
+
+describe("S13-BE — stale-state race (task section 17)", () => {
+  it("Owner A's stale CONFIRMED view self-corrects to COMPLETED when Owner B completed it first", async () => {
+    const user = userEvent.setup();
+    server[TENANT_A].start = "2020-01-01T09:00:00Z";
+    server[TENANT_A].end = "2020-01-01T09:45:00Z";
+    renderTenant(TENANT_A);
+
+    // Owner A opens the booking (still CONFIRMED in their view).
+    await screen.findByText("Jane Doe");
+    await user.click(screen.getByRole("button", { name: /view booking details for jane doe/i }));
+    const dialog = await screen.findByRole("dialog", { name: /booking details/i });
+    expect(within(dialog).getByRole("button", { name: "Mark no-show" })).toBeInTheDocument();
+
+    // Owner B, elsewhere, marks it COMPLETED first — Owner A's dialog has no
+    // way to know this yet; its cached data is now stale.
+    server[TENANT_A].status = "COMPLETED";
+
+    // Owner A clicks "Mark no-show" — the backend rejects the transition
+    // (BOOKING_INVALID_TRANSITION) because the real current status is no
+    // longer CONFIRMED.
+    await user.click(within(dialog).getByRole("button", { name: "Mark no-show" }));
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+
+    // The mutation's onError invalidates this booking's detail, which
+    // refetches the NOW-real state and the dialog self-corrects: it shows
+    // Completed, and no further lifecycle/cancel/reschedule actions — not a
+    // blind retry, and not stuck showing the stale CONFIRMED state.
+    await waitFor(() => expect(within(dialog).getByText("Completed")).toBeInTheDocument());
+    expect(within(dialog).queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Cancel booking" })).not.toBeInTheDocument();
+    expect(markBookingNoShow).toHaveBeenCalledTimes(1);
   });
 });
 

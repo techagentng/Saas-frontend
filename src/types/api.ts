@@ -50,6 +50,12 @@ export type KnownApiErrorCode =
   // wrong token, a cross-tenant token, and a reference/token mismatch all
   // collapse to this one code, deliberately indistinguishable.
   | "BOOKING_NOT_FOUND"
+  // Scheduling S13-BE terminal booking transitions (internal/errors/codes.go,
+  // HTTP 409) — a status transition the domain rule forbids: the booking is
+  // not CONFIRMED (and not already the target status), or a CONFIRMED
+  // booking's appointment window hasn't ended yet. Also returned by
+  // Cancel/Reschedule against an already-COMPLETED/NO_SHOW booking.
+  | "BOOKING_INVALID_TRANSITION"
   | "TENANT_SLUG_TAKEN"
   | "TENANT_SLUG_INVALID"
   | "USER_ALREADY_EXISTS"

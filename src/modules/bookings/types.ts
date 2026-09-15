@@ -19,11 +19,17 @@ export type BookingParty = {
 };
 
 /**
- * Constrained to the two values `model.BookingStatus` allows
+ * Constrained to the four values `model.BookingStatus` allows
  * (`internal/scheduling/model/booking.go`). A booking row is never deleted —
- * cancelling only changes this field.
+ * a status transition only changes this field.
+ *
+ * CANCELLED, COMPLETED and NO_SHOW (the latter two Scheduling S13-BE) are all
+ * terminal: the backend's own domain rule permits only CONFIRMED -> CANCELLED,
+ * CONFIRMED -> COMPLETED, and CONFIRMED -> NO_SHOW. There is no
+ * COMPLETED <-> NO_SHOW transition, and none of the three terminal statuses
+ * reverses to CONFIRMED.
  */
-export type BookingStatus = "CONFIRMED" | "CANCELLED";
+export type BookingStatus = "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
 
 /**
  * One dashboard list row (`TenantBooking`). `start`/`end`/`created_at` are

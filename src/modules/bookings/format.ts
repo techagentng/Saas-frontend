@@ -67,3 +67,22 @@ export function toTenantLocalDateAndTime(
     time: `${part("hour")}:${part("minute")}`,
   };
 }
+
+/**
+ * Whether a booking's appointment window has already ended (Scheduling
+ * S13-BE's own eligibility rule for Complete/No-show: "current tenant-local
+ * time >= booking.end"). No timezone conversion is needed here — `end` and
+ * "now" are both absolute instants, and comparing instants is
+ * timezone-independent by construction (the backend's own doc comment on
+ * `transitionToTerminal` makes the identical point). Timezone only matters
+ * for how a time is *displayed*, not for this comparison.
+ *
+ * This is a UX-only hint for which lifecycle actions to show — the backend
+ * remains the final authority and re-validates independently on every
+ * request (it compares against ITS OWN clock, which may differ slightly from
+ * a skewed device clock; see `RescheduleBookingDialog`'s equivalent note on
+ * never trusting the frontend to compute a real scheduling fact).
+ */
+export function hasBookingEnded(endIso: string, now: Date = new Date()): boolean {
+  return now.getTime() >= new Date(endIso).getTime();
+}

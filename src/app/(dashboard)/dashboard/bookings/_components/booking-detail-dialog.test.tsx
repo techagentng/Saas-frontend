@@ -24,11 +24,15 @@ const bookingResult = {
 type MutationStub = { mutateAsync: ReturnType<typeof vi.fn>; isPending: boolean };
 let cancelMutation: MutationStub;
 let rescheduleMutation: MutationStub;
+let completeMutation: MutationStub;
+let noShowMutation: MutationStub;
 
 vi.mock("@/modules/bookings/queries", () => ({
   useBooking: () => bookingResult,
   useCancelBooking: () => cancelMutation,
   useRescheduleBooking: () => rescheduleMutation,
+  useCompleteBooking: () => completeMutation,
+  useMarkBookingNoShow: () => noShowMutation,
 }));
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
@@ -50,6 +54,23 @@ const CONFIRMED: TenantBookingDetail = {
 };
 
 const CANCELLED: TenantBookingDetail = { ...CONFIRMED, status: "CANCELLED" };
+
+// Safe, unambiguous past/future instants — never dependent on "today" at test
+// run time, unlike the CONFIRMED fixture above (whose fixed 2026-09-12 date
+// happens to already be past by the time this suite runs, which is exactly
+// the kind of implicit assumption these two avoid).
+const PAST_CONFIRMED: TenantBookingDetail = {
+  ...CONFIRMED,
+  start: "2020-01-01T09:00:00Z",
+  end: "2020-01-01T09:45:00Z",
+};
+const FUTURE_CONFIRMED: TenantBookingDetail = {
+  ...CONFIRMED,
+  start: "2099-01-01T09:00:00Z",
+  end: "2099-01-01T09:45:00Z",
+};
+const COMPLETED: TenantBookingDetail = { ...PAST_CONFIRMED, status: "COMPLETED" };
+const NO_SHOW: TenantBookingDetail = { ...PAST_CONFIRMED, status: "NO_SHOW" };
 
 function renderDialog(booking: TenantBookingDetail | undefined, permissions: Permission[] = []) {
   granted.clear();
@@ -74,6 +95,8 @@ beforeEach(() => {
   granted.clear();
   cancelMutation = { mutateAsync: vi.fn().mockResolvedValue(CANCELLED), isPending: false };
   rescheduleMutation = { mutateAsync: vi.fn().mockResolvedValue(RESCHEDULED), isPending: false };
+  completeMutation = { mutateAsync: vi.fn().mockResolvedValue(COMPLETED), isPending: false };
+  noShowMutation = { mutateAsync: vi.fn().mockResolvedValue(NO_SHOW), isPending: false };
 });
 
 describe("BookingDetailDialog — rendering", () => {
@@ -219,5 +242,141 @@ describe("BookingDetailDialog — cancellation confirmation", () => {
     expect(screen.getByText("Confirmed")).toBeInTheDocument();
     // Retry is simply clicking the same action again.
     expect(screen.getByRole("button", { name: /cancel booking/i })).toBeInTheDocument();
+  });
+});
+
+describe("BookingDetailDialog — lifecycle action eligibility (S13-BE)", () => {
+  it("shows both Mark completed and Mark no-show for an eligible past CONFIRMED booking with booking.update", () => {
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    expect(screen.getByRole("button", { name: "Mark completed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark no-show" })).toBeInTheDocument();
+  });
+
+  it("hides both for a future CONFIRMED booking, even with permission", () => {
+    renderDialog(FUTURE_CONFIRMED, ["booking.read", "booking.update"]);
+
+    expect(screen.queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+    // Reschedule/Cancel remain available — the backend applies no
+    // time-window restriction to either, only to Complete/No-show.
+    expect(screen.getByRole("button", { name: "Reschedule" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel booking" })).toBeInTheDocument();
+  });
+
+  it("hides both for a CANCELLED booking", () => {
+    renderDialog(CANCELLED, ["booking.read", "booking.update"]);
+
+    expect(screen.queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+  });
+
+  it("hides every action for a COMPLETED booking — terminal, status display only", () => {
+    renderDialog(COMPLETED, ["booking.read", "booking.update"]);
+
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel booking" })).not.toBeInTheDocument();
+  });
+
+  it("hides every action for a NO_SHOW booking — terminal, status display only", () => {
+    renderDialog(NO_SHOW, ["booking.read", "booking.update"]);
+
+    expect(screen.getByText("No-show")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel booking" })).not.toBeInTheDocument();
+  });
+
+  it("hides both for a read-only user (booking.read but no booking.update), even on an eligible past booking", () => {
+    renderDialog(PAST_CONFIRMED, ["booking.read"]);
+
+    expect(screen.queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark no-show" })).not.toBeInTheDocument();
+  });
+});
+
+describe("BookingDetailDialog — Complete flow", () => {
+  it("confirms, calls the mutation once, and closes the confirmation dialog on success", async () => {
+    const user = userEvent.setup();
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+    expect(screen.getByRole("dialog", { name: /mark this appointment as completed\?/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+
+    expect(completeMutation.mutateAsync).toHaveBeenCalledTimes(1);
+    expect(completeMutation.mutateAsync).toHaveBeenCalledWith("booking-1");
+    expect(
+      screen.queryByRole("dialog", { name: /mark this appointment as completed\?/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /booking details/i })).toBeInTheDocument();
+  });
+
+  it("on failure, preserves CONFIRMED and shows an inline error", async () => {
+    const user = userEvent.setup();
+    completeMutation.mutateAsync = vi.fn().mockRejectedValue(new Error("network down"));
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("Confirmed")).toBeInTheDocument();
+  });
+
+  it("prevents a duplicate submission while pending", async () => {
+    const user = userEvent.setup();
+    completeMutation.isPending = true;
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Mark completed" }));
+
+    expect(screen.getByRole("button", { name: /marking completed…/i })).toBeDisabled();
+  });
+});
+
+describe("BookingDetailDialog — No-show flow", () => {
+  it("confirms, calls the mutation once, and closes the confirmation dialog on success", async () => {
+    const user = userEvent.setup();
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+    expect(screen.getByRole("dialog", { name: /mark this appointment as no-show\?/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+
+    expect(noShowMutation.mutateAsync).toHaveBeenCalledTimes(1);
+    expect(noShowMutation.mutateAsync).toHaveBeenCalledWith("booking-1");
+    expect(completeMutation.mutateAsync).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("dialog", { name: /mark this appointment as no-show\?/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("on failure, preserves CONFIRMED and shows an inline error", async () => {
+    const user = userEvent.setup();
+    noShowMutation.mutateAsync = vi.fn().mockRejectedValue(new Error("network down"));
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("Confirmed")).toBeInTheDocument();
+  });
+
+  it("prevents a duplicate submission while pending", async () => {
+    const user = userEvent.setup();
+    noShowMutation.isPending = true;
+    renderDialog(PAST_CONFIRMED, ["booking.read", "booking.update"]);
+
+    await user.click(screen.getByRole("button", { name: "Mark no-show" }));
+
+    expect(screen.getByRole("button", { name: /marking no-show…/i })).toBeDisabled();
   });
 });
